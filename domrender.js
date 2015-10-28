@@ -1,4 +1,3 @@
-// immutability helpers?
 var domrender = {}
 if (typeof module != "undefined") {
     module.exports = domrender;
@@ -339,3 +338,5 @@ domrender.saveExpressions = function (d, el) {
         domrender.saveExpressions(d, el.children[i])
     }   
 }
+// immutability helpers?
+// auto initialize componnts?

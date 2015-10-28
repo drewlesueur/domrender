@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+<body>
+<div id="app">
+  <div @foreach="myRows" @foreachitemname="row" @foreachitemindex="i">
+    <div>
+      <span @e style="cursor: pointer;" onclick="deleteRow(i)">&times;</span>
+      <span @v=i></span> This row's name is <span @v="row.name"></span> 
+    </div>
+  </div>
+</div>
+<script src="../domrender.js"></script>
+<script>
+var myApp = {
+  deleteRow: function (i) {
+    myApp.myRows.splice(i, 1)
+    myView.render() 
+  },
+  addRow: function () {
+    myApp.myRows.push({
+      name: Math.random().toString().substr(2)
+    })
+    myView.render() // must call render
+  },
+  myRows: []
+}
+var myView = domrender.use(document.getElementById('app'), myApp)
+
+myApp.addRow()
+setInterval(myApp.addRow, 1000)
+</script>
+</body>
+</html>

@@ -74,7 +74,7 @@
 &lt;body&gt;
 
 <span class="step-note">&lt;!-- Step 1. Include domrender.js --&gt;</span>
-<span class="step">&lt;script src="<a href="/domrender.js">/domrender.js</a>"&gt;&lt;/script&gt;</span>
+<span class="step">&lt;script src="<a href="domrender.js">domrender.js</a>"&gt;&lt;/script&gt;</span>
 
 <span class="step-note">&lt;!-- Step 2. Make a template in html --&gt;</span>
 <span class="step">&lt;div id="click-app"&gt;
@@ -117,21 +117,20 @@ var myView = domrender.use(el, myClickApp)
 
 <h2>More Examples</h2>
 <div class="examples">
-<a href="demos/text_html.html">Text and Raw Html with input binding</a>
+<a href="demos/text_html.html">Text and raw html with input binding</a>
 <a href="demos/attributes.html">Attributes with more form element binding</a>
-<a >Loops</a>
-<a >Child Components</a>
-<a >Dynamic Components</a>
-<a >Expressions as values</a>
-<a >Events</a>
-<a >Todo App</a>
+<a href="demos/loops.html">Loops with events</a> 
+<a href="demos/components.html">Expressions and components</a>
+
+<h2>Examples Coming Soon</h2>
+<a>Todo App</a>
 </div>
 
 
 <h2>Concepts</h2>
 <p style="text-align: left;">
 Domrender is inspired by Riot and React.
-Like Riot and React, you can think of Domrender as a "re-render-the-world" model.
+Like Riot and React, you can think updates in Domrender as "re-render-the-world".
 Where React uses the virtual dom diffing approach, Riot uses a value diffing approach.*
 Like Riot, Domrender also uses a value diffing approach, but does not require any compiling of <code>.tag</code> files.
 Domrender just uses your existing dom. In Domrender, when <code>render()</code> is called, it will reevaluate
@@ -145,7 +144,7 @@ your inline event handlers have the same scope as the javascript object they are
 you can say <code>onclick="handleClick()"</code> instead of <code>onclick="myClickApp.handleClick()"</code>.
 
 <br>
-<span style="font-size: 0.5em">*This is my understanding of Riot</span>
+<span style="font-size: 0.5em">*This is my understanding of Riot.</span>
 </p>
 
 <h2>Other view libraries</h2>

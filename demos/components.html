@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+<body>
+<div id="app">
+  <!-- notice we have an "expression" here (uppercase title)-->
+  <h1 @v="uppercase title"></h1>
+  <div @component="personView" @scope="bob"></div>
+  <div @component="personView" @scope="alice"></div>
+
+  <div @dynamiccomponent="myDynamicView" @scope="ted"></div>
+  <button @e onclick="changeDynamicView()">Change Dynamic View</div>
+</div>
+<div style="display: none;">
+  <div id="personView">
+    Hi my name is <span @v=name></span> and I like <span @v="color" @style.color=color></span>
+  </div>
+  <div id="otherView" @style.background-color=color style="color: white;">
+    This is another view. I am <span @v=name></span> and I like <span @v=color></span> a lot!
+  </div>
+</div>
+<script src="../domrender.js"></script>
+<script>
+var myApp = {
+  title: "demo app",
+  uppercase: function (x) {
+    //demoing use of function call
+    return x.toUpperCase()
+  },
+  bob: {
+    name: "Bob",
+    color: "blue"
+  },
+  alice: {
+    name: "Alice",
+    color: "red"
+  },
+  ted: {
+    name: "ted",
+    color: "green"
+  },
+  myDynamicView: "personView",
+  changeDynamicView: function () {
+    if (myApp.myDynamicView == "personView") {
+      myApp.myDynamicView = "otherView"
+    } else {
+      myApp.myDynamicView = "personView"
+    }
+    myView.render()
+  }
+}
+var myView = domrender.use(document.getElementById('app'), myApp)
+</script>
+</body>
+</html>
