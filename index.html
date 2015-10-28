@@ -1,1 +1,132 @@
-Hello world
+<!doctype html>
+<html>
+<style>
+  * {
+    font-family: 'Helvetica'; 
+  }
+
+  .container {
+    width: 640px; 
+    margin: auto; 
+    text-align: center;
+  }
+
+  h1 {
+    font-size: 60px;
+  }
+
+  a {
+  }
+
+  pre {
+    font-size: 14px;
+    text-align: left;
+    font-family: 'Courier'; 
+    background-color: lightgray;
+    padding: 10px;
+  }
+
+  pre span {
+    font-size: 14px;
+    text-align: left;
+    font-family: 'Courier'; 
+  }
+
+  .step-note {
+    color: #906; 
+  }
+
+  .examples a {
+    display: block;
+  }
+
+
+</style>
+<body>
+<div class="container">
+<h1>domrender</h1>
+<p>A HTML view library in under 500 lines.</p>
+<p>Similar to React, but a lot smaller.</p>
+<a href="https://github.com/drewlesueur/domrender">Source on GitHub</a>
+<h2>How to use</h2>
+<pre>
+&lt;!doctype html&gt;
+&lt;html&gt;
+&lt;body&gt;
+
+<span class="step-note">&lt;!-- Step 1. Include domrender.js --&gt;</span>
+<span class="step">&lt;script src="domrender.js"&gt;&lt;/script&gt;</span>
+
+<span class="step-note">&lt;!-- Step 2. Make a template in html --&gt;</span>
+<span class="step">&lt;div id="click-app"&gt;
+  &lt;button @e onclick="handleClick()"&gt;Click Me&lt;/button&gt;
+  &lt;br&gt;
+  You clicked the button &lt;span @v=clicks&gt;&lt;/span&gt; times.
+&lt;/div&gt;</span>
+
+&lt;script&gt;
+<span class="step-note">// Step 3. Make a JavaScript model</span>
+<span class="step">var myClickApp = {
+  clicks: 0,
+  handleClick: function () {
+    myClickApp.clicks += 1    
+    myView.render() // call render after update
+  }
+}</span>
+
+<span class="step-note">// Step 4. Bind the model to the dom element</span>
+var el = document.getElementById("click-app")
+var myView = domrender.use(el, myClickApp)
+
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+</pre>
+
+<h2>Live Demo</h2>
+<div>
+<script src="/domrender.js"></script>
+
+<div id="click-app" style="background-color: #eee; width: 320px; padding: 10px; margin: auto;">
+  <button @e onclick="handleClick()">Click Me</button>
+  <br>
+  You clicked the button <span @v=clicks></span> times.
+  <br><br>
+  <a href="/demos/hello_world.html">See demo standalone</a>  
+</div>
+
+<h2>More Examples</h2>
+<div class="examples">
+<a href="/demos/attributes.html">Binding Text and Raw Html</a>
+<a href="/demos/attributes.html">Attributes</a>
+<a href="/demos/loops.html">Loops</a>
+<a href="/demos/attributes.html">Class and Style attributes</a>
+<a href="/demos/attributes.html">Conditional Attrubutes</a>
+<a href="/demos/binding_inputs.html">Binding Form Controls</a>
+<a href="/demos/child_components.html">Child Conents</a>
+<a href="/demos/dynamic_components.html">Dynamic components</a>
+</div>
+
+<script>
+// Step 3. Make a javascript model
+var myClickApp = {
+  clicks: 0,
+  handleClick: function () {
+    myClickApp.clicks += 1    
+    myView.render() // call render after update
+  }
+}
+
+// Step 4. bind the model to the dom element
+var el = document.getElementById("click-app")
+var myView = domrender.use(el, myClickApp)
+</script>
+
+</body>
+</html>
+</div>
+</div>
+
+</body>
+</html>

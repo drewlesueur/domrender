@@ -1,11 +1,11 @@
 // instead of having separate arrays for foreaches, epsressionsandelements, etc etc, just have a big array with a type // that way things are done in same order as defined, so you can hack stateful things
 // immutability helpers?
-var domrender4 = {}
+var domrender = {}
 if (typeof module != "undefined") {
-    module.exports = domrender4;
+    module.exports = domrender;
 }
-domrender4.use = function (el, scope) {
-    var d = domrender4.compile(el)
+domrender.use = function (el, scope) {
+    var d = domrender.compile(el)
     d.scope = scope;
     d.render = function(callback) { 
         if (callback) {
@@ -13,7 +13,7 @@ domrender4.use = function (el, scope) {
         } 
         clearTimeout(d.renderTimeout) 
         d.renderTimeout = setTimeout(function() {
-            var now = Date.now(); domrender4.render(d, scope); var duration = Date.now() - now
+            var now = Date.now(); domrender.render(d, scope); var duration = Date.now() - now
             var theCallback
             while (theCallback = d.renderCallbacks.pop()) {
               theCallback() 
@@ -24,7 +24,7 @@ domrender4.use = function (el, scope) {
     d.render()
     return d
 }
-domrender4.compile = function(el, parentD) {
+domrender.compile = function(el, parentD) {
     var d = {}
     if (parentD) {
         d.root = parentD.root
@@ -32,7 +32,7 @@ domrender4.compile = function(el, parentD) {
         d.root = d
     }
     d.renderCallbacks = []
-    el._domrender4 = d
+    el._domrender = d
     d.expressionsAndElements = []
     d.eventElements = []
     d.childComponents = []
@@ -40,13 +40,13 @@ domrender4.compile = function(el, parentD) {
     d.dynamicComponents = []
     d.inputs = []
     d.el = el
-    domrender4.saveExpressions(d, el)
+    domrender.saveExpressions(d, el)
     return d
 }
-domrender4.getLastObjAndKey = function (me, expr) {
+domrender.getLastObjAndKey = function (me, expr) {
     var dotParts = expr.split(".")
     if (dotParts[0] === "helpers") {
-        me = domrender4.rootScope; // this is ok because it changes every time you call render
+        me = domrender.rootScope; // this is ok because it changes every time you call render
     }
     for (var i = 0; i < dotParts.length - 1; i++) {
         var name = dotParts[i]
@@ -58,12 +58,12 @@ domrender4.getLastObjAndKey = function (me, expr) {
     var lastPart = dotParts[dotParts.length - 1]
     return [me, lastPart]
 }
-domrender4.evalFunc = function(me, expressions, a, b, c) {
-    var lastObjAndKey = domrender4.getLastObjAndKey(me, expressions[0])
+domrender.evalFunc = function(me, expressions, a, b, c) {
+    var lastObjAndKey = domrender.getLastObjAndKey(me, expressions[0])
     var func =  lastObjAndKey[0][lastObjAndKey[1]]
     var args = []
     for (var i = 1; i < expressions.length; i++) {
-        args.push(domrender4.eval2(me, expressions[i], a, b, c))
+        args.push(domrender.eval2(me, expressions[i], a, b, c))
     }
     if (!func) {
         console.error("DOMRENDER:", "attempted to evaluate '" + expressions[0] + "' but could not find it!");
@@ -71,15 +71,15 @@ domrender4.evalFunc = function(me, expressions, a, b, c) {
     }
     return func.apply(null, args)
 }
-domrender4.eval = function (me, expr, a, b, c) {
+domrender.eval = function (me, expr, a, b, c) {
     var expressions = expr.split(" ")
     if (expressions.length == 1)  {
-        return domrender4.eval2(me, expr, a, b, c)
+        return domrender.eval2(me, expr, a, b, c)
     }
-    return domrender4.evalFunc(me, expressions, a, b, c)
+    return domrender.evalFunc(me, expressions, a, b, c)
 }
-domrender4.eval2 = function(me, expr, a, b, c) {
-    var lastObjAndKey = domrender4.getLastObjAndKey(me, expr)
+domrender.eval2 = function(me, expr, a, b, c) {
+    var lastObjAndKey = domrender.getLastObjAndKey(me, expr)
     if (!lastObjAndKey || !lastObjAndKey[0]) {
         return null 
     }
@@ -89,12 +89,12 @@ domrender4.eval2 = function(me, expr, a, b, c) {
     }
     return me
 }
-domrender4.set = function (me, expr, value) {
-    var lastObjAndKey = domrender4.getLastObjAndKey(me, expr)
+domrender.set = function (me, expr, value) {
+    var lastObjAndKey = domrender.getLastObjAndKey(me, expr)
     lastObjAndKey[0][lastObjAndKey[1]] = value
     return lastObjAndKey[0];
 }
-domrender4.camelCase = function (val) {
+domrender.camelCase = function (val) {
     var parts = val.split("-")
     var ret = [parts[0]]
     for (var i=1; i<parts.length; i++) {
@@ -102,26 +102,26 @@ domrender4.camelCase = function (val) {
     }
     return ret.join("")
 }
-domrender4.render = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
-    domrender4.rootScope = d.root.scope;
+domrender.render = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
+    domrender.rootScope = d.root.scope;
     for (var i=0; i<d.childComponents.length; i++) {
         var childComponent = d.childComponents[i]
         var childD = childComponent.d
-        var childScope = domrender4.eval(scope, childComponent.scopeExpr)
+        var childScope = domrender.eval(scope, childComponent.scopeExpr)
         if (childScope) {
-            domrender4.render(childD, childScope)
+            domrender.render(childD, childScope)
         }
     }
     for (var i=0; i<d.dynamicComponents.length; i++) {
         var dynComp = d.dynamicComponents[i]
-        var componentName = domrender4.eval(scope, dynComp.componentExpr)
+        var componentName = domrender.eval(scope, dynComp.componentExpr)
         if (dynComp.lastComponentName != componentName) { // compile it and save it to the dom
             dynComp.el.innerHTML = ""
             var componentNode = document.getElementById(componentName)
             if (componentNode) {
                 var cloned = componentNode.cloneNode(true)
                 cloned.removeAttribute("id") // 
-                var childD = domrender4.compile(cloned, d) // TODO: you could cache the compiled value
+                var childD = domrender.compile(cloned, d) // TODO: you could cache the compiled value
                 dynComp.d = childD  
                 dynComp.childEl = cloned
                 dynComp.el.appendChild(cloned)
@@ -131,8 +131,8 @@ domrender4.render = function (d, scope, loopScope, index, forEachItemName, forEa
             dynComp.lastComponentName = componentName
         }
         if (dynComp.d) {
-            var componentScope = domrender4.eval(scope, dynComp.scopeExpr) // TODO: cache component scope, but it could be a function
-            domrender4.render(dynComp.d, componentScope)
+            var componentScope = domrender.eval(scope, dynComp.scopeExpr) // TODO: cache component scope, but it could be a function
+            domrender.render(dynComp.d, componentScope)
         }
     }
     for (var i=0; i<d.expressionsAndElements.length; i++) {
@@ -149,9 +149,9 @@ domrender4.render = function (d, scope, loopScope, index, forEachItemName, forEa
             todo.el._scope = scope
         }
         todo.el._root = d.root.scope //todo.el._rootEl = d.root
-        var newProp = domrender4.eval(scope, todo.expr, todo.el) // TODO: no binding on @access @bind and @e
+        var newProp = domrender.eval(scope, todo.expr, todo.el) // TODO: no binding on @access @bind and @e
         var oldProp = false
-        todo.el._domrender4 = d // already done?
+        todo.el._domrender = d // already done?
         if (todo.attr == "v" || todo.attr == "vraw") { // v is innerhtml
             oldProp = todo.el.lastInnerHTML
             if (oldProp != newProp) {
@@ -168,7 +168,7 @@ domrender4.render = function (d, scope, loopScope, index, forEachItemName, forEa
                 todo.el.lastInnerHTML = newProp
             }
         } else if (todo.attr.substr(0, 5) == "style" && todo.attr.length > 5) {
-            var styleName = domrender4.camelCase(todo.attr.substr(6))
+            var styleName = domrender.camelCase(todo.attr.substr(6))
             if (!todo.el.lastStyle) { // I don't know if it's faster to check previous style
                 todo.el.lastStyle = {}
             }
@@ -204,7 +204,7 @@ domrender4.render = function (d, scope, loopScope, index, forEachItemName, forEa
                 todo.el.removeAttribute(actualAttr) 
             }
         } else if (todo.attr == "access") {
-          domrender4.set(scope, todo.expr, todo.el)
+          domrender.set(scope, todo.expr, todo.el)
         } else {
             oldProp = todo.el.getAttribute(todo.attr)
             if (oldProp != newProp) {
@@ -220,7 +220,7 @@ domrender4.render = function (d, scope, loopScope, index, forEachItemName, forEa
     }
     for (var i=0; i<d.forEaches.length; i++) {
         var forEacher = d.forEaches[i]
-        var itemsToLoop = domrender4.eval(scope, forEacher.scopeExpr)
+        var itemsToLoop = domrender.eval(scope, forEacher.scopeExpr)
         if (!itemsToLoop) {
             continue 
         }
@@ -236,7 +236,7 @@ domrender4.render = function (d, scope, loopScope, index, forEachItemName, forEa
         // add needed ones
         for (var j=existingElementLength; j<needElementLength; j++) {
             var cloned = forEacher.childEl.cloneNode(true)
-            var newD = domrender4.compile(cloned, d)
+            var newD = domrender.compile(cloned, d)
             forEacher.compileds[j] = newD
             forEacher.el.appendChild(cloned)
         }
@@ -246,12 +246,12 @@ domrender4.render = function (d, scope, loopScope, index, forEachItemName, forEa
             var eachD = forEacher.compileds[j]
             scope[forEacher.forEachItemName] = item
             scope[forEacher.forEachItemIndex] = j
-            domrender4.render(eachD, scope, item, j, forEacher.forEachItemName, forEacher.forEachItemIndex)    
+            domrender.render(eachD, scope, item, j, forEacher.forEachItemName, forEacher.forEachItemIndex)    
         }
     }
     for (var i=0; i<d.inputs.length; i++) {
         var inputter = d.inputs[i]
-        var shouldValue = domrender4.eval(scope, inputter.name) // doing it this way because could be in loop..
+        var shouldValue = domrender.eval(scope, inputter.name) // doing it this way because could be in loop..
         if (loopScope && !inputter.el.nameUpdatedForLoop) { // you could add this when it adds the element for the loop?
             inputter.el.name = inputter.el.name + "__" + index
             inputter.el.nameUpdatedForLoop = true
@@ -269,8 +269,8 @@ domrender4.render = function (d, scope, loopScope, index, forEachItemName, forEa
         }
     }
 }
-domrender4.specialAttrs = {component: 1, scope: 1, foreach: 1, foreachitemname: 1, foreachitemindex: 1, dynamiccomponent: 1, onmount: 1}
-domrender4.saveExpressions = function (d, el) {
+domrender.specialAttrs = {component: 1, scope: 1, foreach: 1, foreachitemname: 1, foreachitemindex: 1, dynamiccomponent: 1, onmount: 1}
+domrender.saveExpressions = function (d, el) {
     if (el.nodeName == "INPUT" || el.nodeName == "TEXTAREA" || el.nodeName == "SELECT") {
         if (el.hasAttribute("@bind")) {
             var bindName = el.getAttribute("name")
@@ -284,14 +284,14 @@ domrender4.saveExpressions = function (d, el) {
                     } else {
                       var value = el.form[bindName + "__" + el._index].value
                     }
-                    domrender4.set(el, bindName, value)
+                    domrender.set(el, bindName, value)
                 } else {
                     if (el.type == "checkbox") {
                       var value = el.form[bindName].value // for selects and radio, could do el.value for some elements
                     } else {
                       var value = el.form[bindName].value
                     }
-                    domrender4.set(el._scope, bindName, value)
+                    domrender.set(el._scope, bindName, value)
                 }
                 d.root.render() // render the lot
             }
@@ -309,7 +309,7 @@ domrender4.saveExpressions = function (d, el) {
             var cloned = componentNode.cloneNode(true)
             cloned.removeAttribute("id")
             el.appendChild(cloned)
-            var childD = domrender4.compile(cloned, d)
+            var childD = domrender.compile(cloned, d)
             d.childComponents.push({el: el, childEl: cloned, scopeExpr: el.getAttribute("@scope"), d: childD})
         }
         return
@@ -326,7 +326,7 @@ domrender4.saveExpressions = function (d, el) {
             if (attr.name == "@e") { // TODO: consider not adding the @e to the expressionsAndElements
                 d.eventElements.push({el: el, prefix: valueName || ""}) // TODO: you could see what is in the event handlers and only bind certain keys
             }
-            if (domrender4.specialAttrs[attrName]) {
+            if (domrender.specialAttrs[attrName]) {
                 continue;
             }
             var valueName = attr.value
@@ -342,6 +342,6 @@ domrender4.saveExpressions = function (d, el) {
         d.forEaches.push({scopeExpr: forEachValue, el: el, childEl: childEl, forEachItemName: forEachItemName, forEachItemIndex: forEachItemIndex, compileds: []})
     }
     for (var i = 0; i < el.children.length; i++) {
-        domrender4.saveExpressions(d, el.children[i])
+        domrender.saveExpressions(d, el.children[i])
     }   
 }
