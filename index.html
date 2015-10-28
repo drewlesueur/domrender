@@ -13,9 +13,19 @@
 
   h1 {
     font-size: 60px;
+    margin-bottom: 15px;
   }
 
   a {
+  }
+
+  p {
+    line-height: 1.5em;
+  }
+
+  code {
+    font-family: 'Courier'; 
+    background-color: #eee;
   }
 
   pre {
@@ -26,7 +36,7 @@
     padding: 10px;
   }
 
-  pre span {
+  pre span, pre a {
     font-size: 14px;
     text-align: left;
     font-family: 'Courier'; 
@@ -40,12 +50,21 @@
     display: block;
   }
 
+  .comparison {
+    border-collapse: collapse;
+    border: 1px solid black;
+  }
+  .comparison td, .comparison th {
+    padding: 10px;
+    border: 1px solid black;
+  }
+
 
 </style>
 <body>
 <div class="container">
-<h1>domrender</h1>
-<p>A HTML view library in under 500 lines.</p>
+<h1>Domrender</h1>
+<p>An HTML view library in under 500 lines.</p>
 <p>Similar to React, but a lot smaller.</p>
 <a href="https://github.com/drewlesueur/domrender">Source on GitHub</a>
 <h2>How to use</h2>
@@ -55,7 +74,7 @@
 &lt;body&gt;
 
 <span class="step-note">&lt;!-- Step 1. Include domrender.js --&gt;</span>
-<span class="step">&lt;script src="domrender.js"&gt;&lt;/script&gt;</span>
+<span class="step">&lt;script src="<a href="/domrender.js">/domrender.js</a>"&gt;&lt;/script&gt;</span>
 
 <span class="step-note">&lt;!-- Step 2. Make a template in html --&gt;</span>
 <span class="step">&lt;div id="click-app"&gt;
@@ -98,15 +117,52 @@ var myView = domrender.use(el, myClickApp)
 
 <h2>More Examples</h2>
 <div class="examples">
-<a href="/demos/attributes.html">Binding Text and Raw Html</a>
+<a href="/demos/attributes.html">Text and Raw Html</a>
 <a href="/demos/attributes.html">Attributes</a>
+<a href="/demos/binding_inputs.html">Simple Two-way Binding</a>
 <a href="/demos/loops.html">Loops</a>
-<a href="/demos/attributes.html">Class and Style attributes</a>
+<a href="/demos/attributes.html">Class and Style Attributes</a>
 <a href="/demos/attributes.html">Conditional Attrubutes</a>
-<a href="/demos/binding_inputs.html">Binding Form Controls</a>
-<a href="/demos/child_components.html">Child Conents</a>
-<a href="/demos/dynamic_components.html">Dynamic components</a>
+<a href="/demos/child_components.html">Child Components</a>
+<a href="/demos/dynamic_components.html">Dynamic Components</a>
 </div>
+
+
+<h2>Concepts</h2>
+<p style="text-align: left;">
+Domrender is inspired by Riot and React.
+Like Riot and React, you can think of Domrender as a "re-render-the-world" model.
+Where React uses the virtual dom diffing approach, Riot uses a value diffing approach.*
+Like Riot, Domrender also uses a value diffing approach, but does not require any compiling of <code>.tag</code> files.
+Domrender just uses your existing dom. In Domrender, when <code>render()</code> is called, it will reevaluate
+all the expressions that are bound to the dom, and then update the dom if needed.
+</p>
+<p style="text-align: left;">
+Another difference is that Domrender does not create a new custom events model.
+Old-fashoned inline (<code>onclick=</code> style) events are
+obvious and easy to debug. Domrender does give you a helpful feature (via the <code>@e</code> attribute) that lets
+your inline event handlers have the same scope as the javascript object they are bound to. For example, in the live demo above,
+you can say <code>onclick="handleClick()"</code> instead of <code>onclick="myClickApp.handleClick()"</code>.
+
+<br>
+<span style="font-size: 0.5em">*This is my understanding of Riot</span>
+</p>
+
+<h2>Other view libraries</h2>
+<div class="examples">
+<a href="https://facebook.github.io/react/">React</a>
+<a href="http://riotjs.com/">Riot</a>
+<a href="https://angularjs.org/">Angular</a>
+<a href="http://www.ractivejs.org/">Ractive</a>
+<a href="http://rivetsjs.com/">Rivets</a>
+<a href="http://emberjs.com/">Ember</a>
+<a href="https://www.polymer-project.org/1.0/">Polymer</a>
+<a href="https://x-tag.readme.io/">x-tag</a>
+<a href="http://webcomponents.org/">web components</a>
+</div>
+
+</tbody>
+</table>
 
 <script>
 // Step 3. Make a javascript model

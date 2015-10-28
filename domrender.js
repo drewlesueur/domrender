@@ -1,4 +1,3 @@
-// instead of having separate arrays for foreaches, epsressionsandelements, etc etc, just have a big array with a type // that way things are done in same order as defined, so you can hack stateful things
 // immutability helpers?
 var domrender = {}
 if (typeof module != "undefined") {
@@ -137,15 +136,13 @@ domrender.render = function (d, scope, loopScope, index, forEachItemName, forEac
     }
     for (var i=0; i<d.expressionsAndElements.length; i++) {
         var todo = d.expressionsAndElements[i]
-        // consider ignoring this in place of the eventElements
-        // TODO: does this get called more than once per el. I think so
-        if (loopScope) {
+        if (loopScope) { // TODO: only call this once per el.
             todo.el._scope = loopScope
             todo.el._index = index
             todo.el._parentScope = scope
             todo.el[forEachItemName] = loopScope
             todo.el[forEachItemIndex] = index
-        } else {
+        } else { // TODO: only call this once per el.
             todo.el._scope = scope
         }
         todo.el._root = d.root.scope //todo.el._rootEl = d.root
@@ -179,8 +176,7 @@ domrender.render = function (d, scope, loopScope, index, forEachItemName, forEac
             }
         } else if (todo.attr.substr(0, 5) == "class" && todo.attr.length > 5) {
             var className = todo.attr.substr(6)
-            // TODO: use classList
-            var classList = (todo.el.getAttribute("class") || "").split(" ")
+            var classList = (todo.el.getAttribute("class") || "").split(" ") // should I use classList api?
             var classIndex = 0
             for (var classI = 0; classI < classList.length; classI++) {
                 if (classList[classI] == className) {
@@ -214,7 +210,7 @@ domrender.render = function (d, scope, loopScope, index, forEachItemName, forEac
     }
     for (var i=0; i<d.eventElements.length; i++) {
         var eventElInfo = d.eventElements[i]
-        for (var x in scope) { // is this cray slow?
+        for (var x in scope) { // this is slower for huge lists, don't use @e in big loops
             eventElInfo.el[eventElInfo.prefix + x] = scope[x] 
         }
     }
@@ -225,13 +221,12 @@ domrender.render = function (d, scope, loopScope, index, forEachItemName, forEac
             continue 
         }
         var existingElementLength = forEacher.el.children.length
-        // TODO: Handle uninitialized items.
         var needElementLength = itemsToLoop.length
         // remove extra ones
         for (var j=needElementLength; j<existingElementLength; j++) { 
             forEacher.el.removeChild(forEacher.compileds[j].el)
             // TODO: consider keeping it around for a while. have a pool of ones to reuse?
-            forEacher.compileds[j] = null // TODO: you can slice it out before or afterwards, or keep in around ini conjunction with the elToRemove
+            forEacher.compileds[j] = null // TODO: you can slice it out before or afterwards, or keep in around in conjunction with the elToRemove
         }
         // add needed ones
         for (var j=existingElementLength; j<needElementLength; j++) {
@@ -251,7 +246,7 @@ domrender.render = function (d, scope, loopScope, index, forEachItemName, forEac
     }
     for (var i=0; i<d.inputs.length; i++) {
         var inputter = d.inputs[i]
-        var shouldValue = domrender.eval(scope, inputter.name) // doing it this way because could be in loop..
+        var shouldValue = domrender.eval(scope, inputter.name) // doing it this way because could be in loop.
         if (loopScope && !inputter.el.nameUpdatedForLoop) { // you could add this when it adds the element for the loop?
             inputter.el.name = inputter.el.name + "__" + index
             inputter.el.nameUpdatedForLoop = true
@@ -276,7 +271,6 @@ domrender.saveExpressions = function (d, el) {
             var bindName = el.getAttribute("name")
             d.inputs.push({el: el, name: bindName})   
             // begin 2-way binding two-way two way. Multiselects are not supported, as of now
-            // TODO: only set if the value is different?!
             var handleChange = function () {
                 if (el._parentScope) { // if it's in a loop, then you are most likely binding to the foreachitemname
                     if (el.type == "checkbox") {
@@ -287,7 +281,7 @@ domrender.saveExpressions = function (d, el) {
                     domrender.set(el, bindName, value)
                 } else {
                     if (el.type == "checkbox") {
-                      var value = el.form[bindName].value // for selects and radio, could do el.value for some elements
+                      var value = el.form[bindName].value
                     } else {
                       var value = el.form[bindName].value
                     }
@@ -335,7 +329,7 @@ domrender.saveExpressions = function (d, el) {
     }
     var forEachValue = el.getAttribute("@foreach")
     if (forEachValue) {
-        var forEachItemName = el.getAttribute("@forEachItemName")
+        var forEachItemName = el.getAttribute("@foreachitemname")
         var forEachItemIndex = el.getAttribute("@foreachitemindex")
         var childEl = el.firstElementChild
         el.innerHTML = ""
