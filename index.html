@@ -117,14 +117,14 @@ var myView = domrender.use(el, myClickApp)
 
 <h2>More Examples</h2>
 <div class="examples">
-<a href="/demos/attributes.html">Text and Raw Html</a>
-<a href="/demos/attributes.html">Attributes</a>
-<a href="/demos/binding_inputs.html">Simple Two-way Binding</a>
-<a href="/demos/loops.html">Loops</a>
-<a href="/demos/attributes.html">Class and Style Attributes</a>
-<a href="/demos/attributes.html">Conditional Attrubutes</a>
-<a href="/demos/child_components.html">Child Components</a>
-<a href="/demos/dynamic_components.html">Dynamic Components</a>
+<a href="/demos/text_html.html">Text and Raw Html with input binding</a>
+<a href="/demos/attributes.html">Attributes with more form element binding</a>
+<a >Loops</a>
+<a >Child Components</a>
+<a >Dynamic Components</a>
+<a >Expressions as values</a>
+<a >Events</a>
+<a >Todo App</a>
 </div>
 
 
@@ -138,7 +138,7 @@ Domrender just uses your existing dom. In Domrender, when <code>render()</code> 
 all the expressions that are bound to the dom, and then update the dom if needed.
 </p>
 <p style="text-align: left;">
-Another difference is that Domrender does not create a new custom events model.
+Another difference is that Domrender does not do anyting special with event handling.
 Old-fashoned inline (<code>onclick=</code> style) events are
 obvious and easy to debug. Domrender does give you a helpful feature (via the <code>@e</code> attribute) that lets
 your inline event handlers have the same scope as the javascript object they are bound to. For example, in the live demo above,

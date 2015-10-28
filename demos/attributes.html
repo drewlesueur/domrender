@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<body>
+<style>
+.small-box {
+    width: 320px;
+    padding: 10px;
+}
+
+.big-font {
+  font-size: 30px;
+}
+</style>
+<div id="app">
+  <form>
+
+    <br>
+    <select @bind name="align">
+      <option>left</option>
+      <option>center</option>
+      <option>right</option>
+    </select>
+
+    <br>
+    <select @bind name="borderStyle">
+      <option>2px solid orange</option>
+      <option>5px dotted red</option>
+      <option>20px ridge green</option>
+    </select>
+
+    <br>
+    <label><input type="checkbox" @bind name="bigFont">Use big font</label>
+
+    <br>
+    <label><input type="checkbox" @bind name="isDraggable">draggable?</label>
+  </form>
+  <div @align=align @?draggable="isDraggable" @style.border="borderStyle" @class.big-font="bigFont" class="small-box">Some text</div>
+</div>
+<script src="/domrender.js"></script>
+<script>
+
+var myApp = {
+  align: "left",
+  borderStyle: "2px solid orange",
+  bigFont: false,
+  isDraggable: false,
+}
+
+domrender.use(document.getElementById('app'), myApp)
+</script>
+</body>
+</html>

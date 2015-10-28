@@ -281,7 +281,7 @@ domrender.saveExpressions = function (d, el) {
                     domrender.set(el, bindName, value)
                 } else {
                     if (el.type == "checkbox") {
-                      var value = el.form[bindName].value
+                      var value = el.form[bindName].checked
                     } else {
                       var value = el.form[bindName].value
                     }

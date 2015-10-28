@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+<body>
+<div id="app">
+<form>
+  Try typing some html in here
+  <br>
+  <input style="width: 320px;" type="text" @bind name="theText">
+  <!-- use @bind and name="" to get the 2 way binding -->
+</form>
+
+<h2>Clean text</h2>
+<!-- @v binds to the innerHTML, but cleans it -->
+<div @v="theText"></div>
+
+<h2>Unclean text</h2>
+<!-- @vraw binds to the innerHTML, but does not clean it -->
+<div @vraw="theText"></div>
+</div>
+<script src="/domrender.js"></script>
+<script>
+var myApp = {
+  theText: "<span style='color: blue;'>Hello world</span>"
+}
+
+domrender.use(document.getElementById('app'), myApp)
+</script>
+</body>
+</html>
