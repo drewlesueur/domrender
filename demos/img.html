@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<body>
+<style>
+.small-box {
+    width: 320px;
+    padding: 10px;
+}
+
+.big-font {
+  font-size: 30px;
+}
+</style>
+<div id="app">
+  <form>
+    <br>
+    <select @bind name="theUrl">
+      <option>https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png</option>
+      <option>http://images.apple.com/v/home/cc/images/promo_ipadmini4_large_2x.jpg</option>
+      <option>https://s.yimg.com/rz/l/yahoo_en-US_f_p_142x37_2x.png</option>
+    </select>
+  </form>
+  <img @src=theUrl>
+</div>
+<script src="../domrender.js"></script>
+<script>
+
+var myApp = {
+  theUrl: "https://s.yimg.com/rz/l/yahoo_en-US_f_p_142x37_2x.png"
+}
+
+var myView = domrender.use(document.getElementById('app'), myApp)
+</script>
+</body>
+</html>
