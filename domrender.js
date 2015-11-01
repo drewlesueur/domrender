@@ -1,3 +1,5 @@
+// TODO: conditional auto render
+// TODO: maybe requestanimationframe or no async render
 var domrender = {}
 if (typeof module != "undefined") {
     module.exports = domrender;
@@ -11,7 +13,7 @@ domrender.use = function (el, scope) {
         } 
         clearTimeout(d.renderTimeout) 
         d.renderTimeout = setTimeout(function() {
-            var now = Date.now(); domrender.render(d, scope); var duration = Date.now() - now
+            var now = (new Date()).getTime(); domrender.render(d, scope); var duration = (new Date()).getTime() - now
             var theCallback
             while (theCallback = d.renderCallbacks.pop()) {
               theCallback() 
@@ -20,6 +22,22 @@ domrender.use = function (el, scope) {
         }, 16)
     }
     d.render()
+    if (window.attachEvent) { //ie and 9?
+      d.ie8InputInterval = setInterval(function() {
+        for (var i=0; i<d.inputs.length;i++) {
+          var input = d.inputs[i]  
+          if (input.el.type == "text") {
+            if (input.el.value != input.el.ieOldValue) { // ie8
+              input.el.ieOldValue = input.el.value 
+              input.el.ieHandleChange()
+            } 
+          }
+        }  
+      }, 1000) 
+    }
+    d.destroy = function () {
+      clearTimeout(d.ie8InputInterval)  //ie8
+    }
     return d
 }
 domrender.compile = function(el, parentD) {
@@ -258,13 +276,30 @@ domrender.render = function (d, scope, loopScope, index, forEachItemName, forEac
         } else {
           var currVal = inputter.el.form[inputter.el.name].value
           if (currVal != shouldValue) {
-              inputter.el.form[inputter.el.name].value = shouldValue
+              if (window.attachEvent) { // IE8
+                if (inputter.el.nodeName == "SELECT") {
+                  var select = inputter.el.form[inputter.el.name]
+                  for (var si=0; si<select.options.length; si++) {
+                    if (select.options[si].value == shouldValue) {
+                      select.selectedIndex = si
+                      break 
+                    } 
+                  }
+                } else {
+                  inputter.el.form[inputter.el.name].value = shouldValue
+                }
+              } else {
+                inputter.el.form[inputter.el.name].value = shouldValue
+              }
           }
         }
     }
 }
 domrender.specialAttrs = {component: 1, scope: 1, foreach: 1, foreachitemname: 1, foreachitemindex: 1, dynamiccomponent: 1, onmount: 1}
 domrender.saveExpressions = function (d, el) {
+    if (el.nodeName == "#comment") { // ie8
+      return
+    }
     if (el.nodeName == "INPUT" || el.nodeName == "TEXTAREA" || el.nodeName == "SELECT") {
         if (el.hasAttribute("@bind")) {
             var bindName = el.getAttribute("name")
@@ -272,26 +307,50 @@ domrender.saveExpressions = function (d, el) {
             // begin 2-way binding two-way two way. Multiselects are not supported, as of now
             var handleChange = function () {
                 if (el._parentScope) { // if it's in a loop, then you are most likely binding to the foreachitemname
-                    if (el.type == "checkbox") {
-                      var value = el.form[bindName + "__" + el._index].checked
-                    } else {
-                      var value = el.form[bindName + "__" + el._index].value
-                    }
-                    domrender.set(el, bindName, value)
+                    var usedBindName = bindName + "__" + el._index
+                    var theScope = el._parentScope
                 } else {
-                    if (el.type == "checkbox") {
-                      var value = el.form[bindName].checked
-                    } else {
-                      var value = el.form[bindName].value
-                    }
-                    domrender.set(el._scope, bindName, value)
+                    var usedBindName = bindName
+                    var theScope = el._scope
                 }
+                if (el.type == "checkbox") {
+                  var value = el.form[usedBindName].checked
+                } else if (el.type == "select-one") { // have to do this because of ie8
+                  var value = el.form[usedBindName].options[el.form[usedBindName].selectedIndex].value
+                } else {
+                  var value = el.form[usedBindName].value
+                }
+                //domrender.set(el, bindName, value) // don't delete this. why did this work in chrome
+                domrender.set(theScope, bindName, value)
                 d.root.render() // render the lot
+                return true;
             }
-            if (el.type == "checkbox" || el.type == "radio") {
-                el.addEventListener('change', handleChange) 
+
+            if (el.attachEvent) { // ie8
+              if (el.type == "checkbox" || el.type == "radio") {
+                  el.attachEvent('onchange', handleChange) 
+                  el.attachEvent('onclick', function () {
+                    this.focus()
+                    this.blur()
+                  }) 
+              } else {
+                  el.attachEvent('onchange', handleChange)
+              }
+              if (el.type == "text") {
+                  el.attachEvent('xonkeydown', function () {
+                    this.focus()
+                    this.blur()
+                  }) 
+              }
+              el.ieHandleChange = handleChange
+              el.ieOldValue = el.value 
+              // see timeout
             } else {
-                el.addEventListener('input', handleChange) // TODO: older IE (use timer?)
+              if (el.type == "checkbox" || el.type == "radio") {
+                  el.addEventListener('change', handleChange) 
+              } else {
+                  el.addEventListener('input', handleChange)
+              }
             }
         }
     }
@@ -336,6 +395,7 @@ domrender.saveExpressions = function (d, el) {
     }
     for (var i = 0; i < el.children.length; i++) {
         domrender.saveExpressions(d, el.children[i])
+        //domrender.saveExpressions(d, el.childNodes[i])
     }   
 }
 // immutability helpers?

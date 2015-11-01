@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+<body>
+<style>
+.small-box {
+    width: 320px;
+    padding: 10px;
+}
+
+.big-font {
+  font-size: 30px;
+}
+</style>
+<div id="app">
+  <form>
+    <label><input type="radio" @bind name="fruit" value="apple"> apple</label>
+    <label><input type="radio" @bind name="fruit" value="cherry"> cherry</label>
+    <label><input type="radio" @bind name="fruit" value="banana"> banana</label>
+  </form>
+  You chose <span @v="fruit"></span>
+</div>
+<script src="../domrender.js"></script>
+<script>
+
+var myApp = {
+  fruit: "apple"
+}
+
+var myView = domrender.use(document.getElementById('app'), myApp)
+</script>
+</body>
+</html>
