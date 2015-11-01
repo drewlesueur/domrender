@@ -379,7 +379,7 @@ domrender.saveExpressions = function (d, el) {
                     var value = el.form[usedBindName].checked
                 } else if (window.attachEvent && el.type == "select-one") { // have to do this because of ie8
                   var value = el.form[usedBindName].options[el.form[usedBindName].selectedIndex].value
-                } else if (window.attachEvent && el.type == "radio") {
+                } else if (el.type == "radio") { //chrome doesn't need this ie and safari do.
                     var value = el.value
                 } else {
                   var value = el.form[usedBindName].value
