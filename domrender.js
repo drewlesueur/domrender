@@ -1,4 +1,4 @@
-//immutability helpers?  // auto initialize components?
+//immutability helpers?  // auto initialize components? //onpropertychange (or expose oninput polyfil)
 var domrender = {}
 if (typeof module != "undefined") {
     module.exports = domrender;
@@ -27,21 +27,38 @@ domrender.use = function (el, scope, options) {
     }
     if (window.attachEvent) { //ie and 9?
       d.ie8InputInterval = setInterval(function() {
-        for (var i=0; i<d.inputs.length;i++) {
-          var input = d.inputs[i]  
-          if (input.el.type == "text") {
-            if (input.el.value != input.el.ieOldValue) { // ie8
-              input.el.ieOldValue = input.el.value 
-              input.el.ieHandleChange()
-            } 
-          }
-        }  
+        domrender.readAllInputs(d)
       }, 1000) 
     }
     d.destroy = function () {
       clearTimeout(d.ie8InputInterval)  //ie8
     }
     return d
+}
+domrender.readAllInputs=function(d) {
+    if (!d) {
+      return 
+    }
+    for (var i=0; i<d.inputs.length;i++) {
+      var input = d.inputs[i]  
+      if (input.el.type == "text") {
+        if (input.el.value != input.el.ieOldValue) { // ie8
+          input.el.ieOldValue = input.el.value 
+          input.el.ieHandleChange()
+        } 
+      }
+    }  
+    for (var i=0; i<d.childComponents.length;i++) {
+      domrender.readAllInputs(d.childComponents[i].d)
+    }
+    for (var i=0; i<d.dynamicComponents.length;i++) {
+      domrender.readAllInputs(d.dynamicComponents[i].d)
+    }
+    for (var i=0; i<d.forEaches.length;i++) {
+      for (j=0; j<d.forEaches[i].compileds.length; j++) {
+        domrender.readAllInputs(d.forEaches[i].compileds[j])
+      }
+    }
 }
 domrender.compile = function(el, parentD) {
     var d = {}
