@@ -1,4 +1,4 @@
-//immutability helpers?  // auto initialize components? //onpropertychange (or expose oninput polyfil)
+//immutability helpers?  // auto initialize components?
 var domrender = {}
 if (typeof module != "undefined") {
     module.exports = domrender;
@@ -135,8 +135,14 @@ domrender.eval2 = function(me, expr, a, b, c) {
 }
 domrender.set = function (me, expr, value) {
     var lastObjAndKey = domrender.getLastObjAndKey(me, expr)
-    lastObjAndKey[0][lastObjAndKey[1]] = value
-    return lastObjAndKey[0];
+    var obj = lastObjAndKey[0]
+    var key = lastObjAndKey[1]
+    var oldValue = obj[key]
+    obj[key] = value
+    if (obj._onInputChangeExperimental) { // only for changes via inputs, etc not normal rendering change detections, because you could just call a function
+      obj._onInputChangeExperimental(obj, key, value, oldValue)
+    }
+    return obj;
 }
 domrender.camelCase = function (val) {
     var parts = val.split("-")
@@ -178,7 +184,7 @@ domrender.render = function (d, scope, loopScope, index, forEachItemName, forEac
                 }
                 todo.el.lastInnerHTML = newProp
             }
-        } else if (todo.attr == "hidden" || todo.attr == "visible") { // so common it's build in
+        } else if (todo.attr == "hidden" || todo.attr == "visible") { // so common it's build in (you could only do visible or hidden)
           var isHidden = todo.el.style.display == "none"
           var wantHidden = todo.attr == "hidden"
           var shouldBeHidden = wantHidden && newProp || !newProp
@@ -394,15 +400,8 @@ domrender.saveExpressions = function (d, el) {
               } else {
                   el.attachEvent('onchange', handleChange)
               }
-              if (el.type == "text") {
-                  el.attachEvent('xonkeydown', function () {
-                    this.focus()
-                    this.blur()
-                  }) 
-              }
               el.ieHandleChange = handleChange
               el.ieOldValue = el.value 
-              // see timeout
             } else {
               if (el.type == "checkbox" || el.type == "radio") {
                   el.addEventListener('change', handleChange) 
@@ -448,12 +447,11 @@ domrender.saveExpressions = function (d, el) {
         var forEachItemName = el.getAttribute("@foreachitemname")
         var forEachItemIndex = el.getAttribute("@foreachitemindex")
         var childEl = el.firstElementChild || el.children[0] // children0 for ie8 (might be comment)
-        childEl = childEl.cloneNode(true) // have to do this because of IE8 
+        childEl = childEl.cloneNode(true) // have to do this because of IE8, when you set innerHTML to "" it wipes the children if you don't clone it
         el.innerHTML = ""
         d.forEaches.push({scopeExpr: forEachValue, el: el, childEl: childEl, forEachItemName: forEachItemName, forEachItemIndex: forEachItemIndex, compileds: []})
     }
     for (var i = 0; i < el.children.length; i++) {
         domrender.saveExpressions(d, el.children[i])
-        //domrender.saveExpressions(d, el.childNodes[i])
     }   
 }

@@ -55,6 +55,16 @@ var myApp = {
     myApp.people.push({
       firstName: "",
       lastName: "",
+      _onInputChangeExperimental: function (obj, key, value, oldValue) {
+        if (key == "firstName") {
+          obj.firstName = obj.firstName.toUpperCase().replace(/-/g, "").split("").join("-")
+          return
+        } 
+        if (key == "favoriteColor" && value == "red") {
+          //obj.favoriteColor = "green" 
+          return
+        }
+      },
       favoriteFruit: "",
       favoriteColor: "",
       isVegetarian: false,
