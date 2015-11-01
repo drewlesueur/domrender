@@ -285,6 +285,14 @@ domrender.render = function (d, scope, loopScope, index, forEachItemName, forEac
                       break 
                     } 
                   }
+                } else if (inputter.el.type == "radio") {
+                    var radios = inputter.el.form[inputter.el.name]
+                    for (var ri=0; ri <radios.length; ri++) {
+                      if (radios[ri].value == shouldValue) {
+                        radios[ri].checked = true 
+                        break 
+                      } 
+                    }
                 } else {
                   inputter.el.form[inputter.el.name].value = shouldValue
                 }
@@ -314,9 +322,11 @@ domrender.saveExpressions = function (d, el) {
                     var theScope = el._scope
                 }
                 if (el.type == "checkbox") {
-                  var value = el.form[usedBindName].checked
-                } else if (el.type == "select-one") { // have to do this because of ie8
+                    var value = el.form[usedBindName].checked
+                } else if (window.attachEvent && el.type == "select-one") { // have to do this because of ie8
                   var value = el.form[usedBindName].options[el.form[usedBindName].selectedIndex].value
+                } else if (window.attachEvent && el.type == "radio") {
+                    var value = el.value
                 } else {
                   var value = el.form[usedBindName].value
                 }
