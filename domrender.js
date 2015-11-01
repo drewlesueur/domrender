@@ -389,7 +389,8 @@ domrender.saveExpressions = function (d, el) {
     if (forEachValue) {
         var forEachItemName = el.getAttribute("@foreachitemname")
         var forEachItemIndex = el.getAttribute("@foreachitemindex")
-        var childEl = el.firstElementChild
+        var childEl = el.firstElementChild || el.children[0] // children0 for ie8 (might be comment)
+        childEl = childEl.cloneNode(true) // have to do this because of IE8 
         el.innerHTML = ""
         d.forEaches.push({scopeExpr: forEachValue, el: el, childEl: childEl, forEachItemName: forEachItemName, forEachItemIndex: forEachItemIndex, compileds: []})
     }

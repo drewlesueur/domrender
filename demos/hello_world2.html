@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<body>
+
+<!-- Step 1. Include domrender.js -->
+<script src="../domrender.js"></script>
+
+<!-- Step 2. Make a template in html -->
+<div id="click-app">
+  <button @e onclick="nested.handleClick()">Click Me</button>
+  <br>
+  You clicked the button <span @v=nested.clicks></span> times.
+</div>
+
+<script>
+// Step 3. Make a JavaScript model
+var myClickApp = {
+  nested: {
+    clicks: 0,
+    handleClick: function () {
+
+      myClickApp.nested.clicks += 1    
+      myView.render() // call render after update
+    }
+  },
+}
+
+// Step 4. Bind the model to the dom element
+var el = document.getElementById("click-app")
+var myView = domrender.use(el, myClickApp)
+
+</script>
+
+</body>
+</html>

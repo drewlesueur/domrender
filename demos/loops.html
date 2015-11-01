@@ -26,8 +26,9 @@ var myApp = {
 }
 var myView = domrender.use(document.getElementById('app'), myApp)
 
-myApp.addRow()
-setInterval(myApp.addRow, 1000)
+for (var i=0; i < 10; i++) {
+  myApp.addRow()
+} 
 </script>
 </body>
 </html>
