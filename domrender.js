@@ -384,12 +384,10 @@ domrender.saveExpressions = function (d, el) {
                 } else {
                   var value = el.form[usedBindName].value
                 }
-                //domrender.set(el, bindName, value) // don't delete this. why did this work in chrome
                 domrender.set(usedScope, bindName, value)
                 d.root.render() // render the lot
                 return true;
             }
-
             if (el.attachEvent) { // ie8
               if (el.type == "checkbox" || el.type == "radio") {
                   el.attachEvent('onchange', handleChange) 
