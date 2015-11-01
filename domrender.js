@@ -1,10 +1,10 @@
-// TODO: conditional auto render
-// TODO: maybe requestanimationframe or no async render
+//immutability helpers?  // auto initialize components?
 var domrender = {}
 if (typeof module != "undefined") {
     module.exports = domrender;
 }
-domrender.use = function (el, scope) {
+domrender.use = function (el, scope, options) {
+    var options = options || {}
     var d = domrender.compile(el)
     d.scope = scope;
     d.render = function(callback) { 
@@ -12,16 +12,19 @@ domrender.use = function (el, scope) {
           d.renderCallbacks.push(callback) 
         } 
         clearTimeout(d.renderTimeout) 
-        d.renderTimeout = setTimeout(function() {
-            var now = (new Date()).getTime(); domrender.render(d, scope); var duration = (new Date()).getTime() - now
+        d.renderTimeout = setTimeout(function() { // requestAnimationFrame?
+            var now = (new Date()).getTime();
+            domrender.render(d, scope);
+            var duration = (new Date()).getTime() - now
             var theCallback
             while (theCallback = d.renderCallbacks.pop()) {
-              theCallback() 
+              theCallback({duration: duration}) 
             }
-            //console.log("it took " + duration + " millis to render.")
         }, 16)
     }
-    d.render()
+    if (!options.preventInitialRender) {
+      d.render()
+    }
     if (window.attachEvent) { //ie and 9?
       d.ie8InputInterval = setInterval(function() {
         for (var i=0; i<d.inputs.length;i++) {
@@ -82,17 +85,25 @@ domrender.evalFunc = function(me, expressions, a, b, c) {
         args.push(domrender.eval2(me, expressions[i], a, b, c))
     }
     if (!func) {
-        console.error("DOMRENDER:", "attempted to evaluate '" + expressions[0] + "' but could not find it!");
         return false;
     }
     return func.apply(null, args)
 }
 domrender.eval = function (me, expr, a, b, c) {
+    var opposite = (expr.substr(0, 1) == "!")
+    if (opposite) {
+      expr = expr.substr(1) 
+    }
     var expressions = expr.split(" ")
     if (expressions.length == 1)  {
-        return domrender.eval2(me, expr, a, b, c)
+        var ret = domrender.eval2(me, expr, a, b, c)
+    } else {
+      var ret = domrender.evalFunc(me, expressions, a, b, c)
     }
-    return domrender.evalFunc(me, expressions, a, b, c)
+    if (opposite) {
+      return !ret  
+    }
+    return ret
 }
 domrender.eval2 = function(me, expr, a, b, c) {
     var lastObjAndKey = domrender.getLastObjAndKey(me, expr)
@@ -120,37 +131,6 @@ domrender.camelCase = function (val) {
 }
 domrender.render = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
     domrender.rootScope = d.root.scope;
-    for (var i=0; i<d.childComponents.length; i++) {
-        var childComponent = d.childComponents[i]
-        var childD = childComponent.d
-        var childScope = domrender.eval(scope, childComponent.scopeExpr)
-        if (childScope) {
-            domrender.render(childD, childScope)
-        }
-    }
-    for (var i=0; i<d.dynamicComponents.length; i++) {
-        var dynComp = d.dynamicComponents[i]
-        var componentName = domrender.eval(scope, dynComp.componentExpr)
-        if (dynComp.lastComponentName != componentName) { // compile it and save it to the dom
-            dynComp.el.innerHTML = ""
-            var componentNode = document.getElementById(componentName)
-            if (componentNode) {
-                var cloned = componentNode.cloneNode(true)
-                cloned.removeAttribute("id") // 
-                var childD = domrender.compile(cloned, d) // TODO: you could cache the compiled value
-                dynComp.d = childD  
-                dynComp.childEl = cloned
-                dynComp.el.appendChild(cloned)
-            } else {
-                dynComp.d = null
-            }
-            dynComp.lastComponentName = componentName
-        }
-        if (dynComp.d) {
-            var componentScope = domrender.eval(scope, dynComp.scopeExpr) // TODO: cache component scope, but it could be a function
-            domrender.render(dynComp.d, componentScope)
-        }
-    }
     for (var i=0; i<d.expressionsAndElements.length; i++) {
         var todo = d.expressionsAndElements[i]
         if (loopScope) { // TODO: only call this once per el.
@@ -181,6 +161,16 @@ domrender.render = function (d, scope, loopScope, index, forEachItemName, forEac
                 }
                 todo.el.lastInnerHTML = newProp
             }
+        } else if (todo.attr == "hidden" || todo.attr == "visible") { // so common it's build in
+          var isHidden = todo.el.style.display == "none"
+          var wantHidden = todo.attr == "hidden"
+          var shouldBeHidden = wantHidden && newProp || !newProp
+          if (isHidden && !shouldBeHidden) {
+            todo.el.style.display = "" 
+          }  else if (!isHidden && shouldBeHidden) {
+            todo.el.style.display = "none" 
+          }
+          // TODO: prevent nested renders
         } else if (todo.attr.substr(0, 5) == "style" && todo.attr.length > 5) {
             var styleName = domrender.camelCase(todo.attr.substr(6))
             if (!todo.el.lastStyle) { // I don't know if it's faster to check previous style
@@ -223,6 +213,37 @@ domrender.render = function (d, scope, loopScope, index, forEachItemName, forEac
             if (oldProp != newProp) {
                 todo.el.setAttribute(todo.attr, newProp)
             }
+        }
+    }
+    for (var i=0; i<d.childComponents.length; i++) {
+        var childComponent = d.childComponents[i]
+        var childD = childComponent.d
+        var childScope = domrender.eval(scope, childComponent.scopeExpr)
+        if (childScope) {
+            domrender.render(childD, childScope)
+        }
+    }
+    for (var i=0; i<d.dynamicComponents.length; i++) {
+        var dynComp = d.dynamicComponents[i]
+        var componentName = domrender.eval(scope, dynComp.componentExpr)
+        if (dynComp.lastComponentName != componentName) { // compile it and save it to the dom
+            dynComp.el.innerHTML = ""
+            var componentNode = document.getElementById(componentName)
+            if (componentNode) {
+                var cloned = componentNode.cloneNode(true)
+                cloned.removeAttribute("id") // 
+                var childD = domrender.compile(cloned, d) // TODO: you could cache the compiled value
+                dynComp.d = childD  
+                dynComp.childEl = cloned
+                dynComp.el.appendChild(cloned)
+            } else {
+                dynComp.d = null
+            }
+            dynComp.lastComponentName = componentName
+        }
+        if (dynComp.d) {
+            var componentScope = domrender.eval(scope, dynComp.scopeExpr) // TODO: cache component scope, but it could be a function
+            domrender.render(dynComp.d, componentScope)
         }
     }
     for (var i=0; i<d.eventElements.length; i++) {
@@ -297,7 +318,17 @@ domrender.render = function (d, scope, loopScope, index, forEachItemName, forEac
                   inputter.el.form[inputter.el.name].value = shouldValue
                 }
               } else {
-                inputter.el.form[inputter.el.name].value = shouldValue
+                if (inputter.el.type == "radio") { // duplicated code for now, don't have to do this if the default value for radio is the same as the first option
+                    var radios = inputter.el.form[inputter.el.name] 
+                    for (var ri=0; ri <radios.length; ri++) {
+                      if (radios[ri].value == shouldValue) {
+                        radios[ri].checked = true 
+                        break 
+                      } 
+                    }
+                } else {
+                  inputter.el.form[inputter.el.name].value = shouldValue
+                }
               }
           }
         }
@@ -316,10 +347,10 @@ domrender.saveExpressions = function (d, el) {
             var handleChange = function () {
                 if (el._parentScope) { // if it's in a loop, then you are most likely binding to the foreachitemname
                     var usedBindName = bindName + "__" + el._index
-                    var theScope = el._parentScope
+                    var usedScope = el // yes the actaul element
                 } else {
                     var usedBindName = bindName
-                    var theScope = el._scope
+                    var usedScope = el._scope
                 }
                 if (el.type == "checkbox") {
                     var value = el.form[usedBindName].checked
@@ -331,7 +362,7 @@ domrender.saveExpressions = function (d, el) {
                   var value = el.form[usedBindName].value
                 }
                 //domrender.set(el, bindName, value) // don't delete this. why did this work in chrome
-                domrender.set(theScope, bindName, value)
+                domrender.set(usedScope, bindName, value)
                 d.root.render() // render the lot
                 return true;
             }
@@ -409,5 +440,3 @@ domrender.saveExpressions = function (d, el) {
         //domrender.saveExpressions(d, el.childNodes[i])
     }   
 }
-// immutability helpers?
-// auto initialize componnts?

@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+<body>
+<div id="app">
+  <table style="width: 100%">
+    <tr>
+      <td style="width: 50%;">
+        <form>
+                <div @foreach="people" @foreachitemname="p" @foreachitemindex="i">
+                  <div style="height: 100px; margin: 5px; padding: 10px; background-color: beige;">
+                    <input type=text @bind name="p.firstName" placeholder="first name">  
+                    <input type=text @bind name="p.lastName" placeholder="last name">  
+                    <br>
+                    Favorite Fruit<select @bind name="p.favoriteFruit">
+                      <option></option>
+                      <option>Apple</option>
+                      <option>Banana</option>
+                      <option>Kiwi</option>
+                    </select>
+
+                    <br>
+                    Favorite color:
+                    <label><input type="radio" @bind name="p.favoriteColor" value="blue"> Blue</label>
+                    <label><input type="radio" @bind name="p.favoriteColor" value="red"> Red </label>
+                    <label><input type="radio" @bind name="p.favoriteColor" value="green"> green</label>
+
+                    <br>
+                    <label><input type="checkbox" @bind name="p.isVegetarian"> Vegetarian?</label>
+                    <br>
+                    <a href="javascript:" @e onclick="removePerson(i)">Delete</a>
+                  </div>
+                </div>
+        </form>
+      </td>
+      <td>
+        <div @foreach="people" @foreachitemname="p" @foreachitemindex="i">
+          <div style="height: 100px; margin: 5px; padding: 10px; background-color: lightgray;">
+           <span @v=p.firstName></span> <span @v=p.lastName></span>'s favorite fruit is <span @v=p.favoriteFruit></span>.
+           <br> Their favorite color is <span @v=p.favoriteColor></span>
+           <br>
+           <span @visible="p.isVegetarian">And they are vegetarian</span>
+           <span @visible="!p.isVegetarian">And they are not vegetarian</span>
+          <div>
+        </div>
+     </td>
+    </tr>
+   </table>
+  <button @e onclick="addPerson()">Add person</button>
+</div>
+<script src="../domrender.js"></script>
+<script>
+var myApp = {
+  people: [],
+  addPerson: function () {
+    myApp.people.push({
+      firstName: "",
+      lastName: "",
+      favoriteFruit: "",
+      favoriteColor: "",
+      isVegetarian: false,
+    })
+    myView.render()
+  },
+  removePerson: function (index) {
+    myApp.people.splice(index, 1)
+    myView.render()
+  }
+}
+var myView = domrender.use(document.getElementById('app'), myApp)
+myApp.addPerson()
+
+</script>
+</body>
+</html>
