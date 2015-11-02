@@ -242,9 +242,7 @@ domrender.render = function (d, scope, loopScope, index, forEachItemName, forEac
         var childComponent = d.childComponents[i]
         var childD = childComponent.d
         var childScope = domrender.eval(scope, childComponent.scopeExpr)
-        if (childScope) {
-            domrender.render(childD, childScope)
-        }
+        domrender.render(childD, childScope)
     }
     for (var i=0; i<d.dynamicComponents.length; i++) {
         var dynComp = d.dynamicComponents[i]
