@@ -64,7 +64,6 @@ domrender.BoundStyle = function () {}
 domrender.BoundClass = function () {}
 domrender.BoundExistsAttribute = function () {}
 domrender.BoundVisible = function () {}
-domrender.BoundHidden = function () {}
 domrender.BoundAccess = function () {}
 domrender.BoundElementGeneral = function () {}
 domrender.BoundDebug = function () {}
@@ -82,6 +81,7 @@ domrender.BoundText.prototype.process = function (d, scope, loopScope, index, fo
         todo.el.lastInnerHTML = newText
     }
 }
+domrender.BoundText.prototype.listName = function () { return "attributesEtc" }
 domrender.BoundHTML.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
     var todo = this
     var newHTML = domrender.eval(scope, todo.expr, todo.el)
@@ -91,6 +91,7 @@ domrender.BoundHTML.prototype.process = function (d, scope, loopScope, index, fo
         todo.el.lastInnerHTML = newHTML
     }
 }
+domrender.BoundHTML.prototype.listName = function () { return "attributesEtc" }
 domrender.BoundVisible.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
     var todo = this
     var shouldBeHidden = !domrender.eval(scope, todo.expr, todo.el)
@@ -102,6 +103,7 @@ domrender.BoundVisible.prototype.process = function (d, scope, loopScope, index,
     }
     // TODO: prevent nested renders for hidden things
 }
+domrender.BoundVisible.prototype.listName = function () { return "attributesEtc" }
 domrender.BoundStyle.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
     var todo = this
     var newStyle = domrender.eval(scope, todo.expr, todo.el)
@@ -114,6 +116,7 @@ domrender.BoundStyle.prototype.process = function (d, scope, loopScope, index, f
         todo.el.lastStyle[todo.styleName] = newStyle
     }
 }
+domrender.BoundStyle.prototype.listName = function () { return "attributesEtc" }
 domrender.BoundClass.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
     var todo = this
     var classExists = domrender.eval(scope, todo.expr, todo.el)
@@ -134,6 +137,7 @@ domrender.BoundClass.prototype.process = function (d, scope, loopScope, index, f
     }
     todo.el.setAttribute("class", classList.join(" "))
 }
+domrender.BoundClass.prototype.listName = function () { return "attributesEtc" }
 domrender.BoundExistsAttribute.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
     var todo = this
     var attrExists = domrender.eval(scope, todo.expr, todo.el)
@@ -144,20 +148,24 @@ domrender.BoundExistsAttribute.prototype.process = function (d, scope, loopScope
         todo.el.removeAttribute(todo.attr) 
     }
 }
+domrender.BoundExistsAttribute.prototype.listName = function () { return "attributesEtc" }
 domrender.BoundAccess.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
   domrender.set(scope, this.expr, this.el)
 }
+domrender.BoundAccess.prototype.listName = function () { return "attributesEtc" }
 domrender.BoundAttribute.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
-  var todo = this
+    var todo = this
     var attrValue = domrender.eval(scope, todo.expr, todo.el)
     oldAttrValue = todo.el.getAttribute(todo.attr)
     if (oldAttrValue != attrValue) {
         todo.el.setAttribute(todo.attr, attrValue)
     }
 }
+domrender.BoundAttribute.prototype.listName = function () { return "attributesEtc" }
 domrender.BoundDebug.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
   debugger
 }
+domrender.BoundDebug.prototype.listName = function () { return "attributesEtc" }
 domrender.BoundElementGeneral.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
   var todo = this
   if (loopScope) {
@@ -172,9 +180,11 @@ domrender.BoundElementGeneral.prototype.process = function (d, scope, loopScope,
   todo.el._root = d.root.scope //todo.el._rootEl = d.root
   todo.el._domrender = d 
 }
+domrender.BoundElementGeneral.prototype.listName = function () { return "generalBookKeepings" }
 domrender.Component.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
     domrender.render(this.d, domrender.eval(scope, this.scopeExpr)) // no passing in loop scope?
 }
+domrender.Component.prototype.listName = function () { return "childComponents" }
 domrender.Component.prototype.readInputIE = function () {
   domrender.readAllInputs(this.d)
 }
@@ -201,6 +211,7 @@ domrender.DynamicComponent.prototype.process = function (d, scope, loopScope, in
         domrender.render(dynComp.d, componentScope)
     }
 }
+domrender.DynamicComponent.prototype.listName = function () { return "dynamicComponents" }
 domrender.DynamicComponent.prototype.readInputIE = function () {
   domrender.readAllInputs(this.d)
 }
@@ -209,6 +220,7 @@ domrender.EventElement.prototype.process = function (d, scope, loopScope, index,
         this.el[this.prefix + x] = scope[x] 
     }
 }
+domrender.EventElement.prototype.listName = function () { return "attributesEtc" }
 domrender.ForEacher.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) { // put this on the boundelementgeneral?
     // key optimization?
     var forEacher = this
@@ -240,6 +252,7 @@ domrender.ForEacher.prototype.process = function (d, scope, loopScope, index, fo
         domrender.render(eachD, scope, item, j, forEacher.forEachItemName, forEacher.forEachItemIndex)    
     }
 }
+domrender.ForEacher.prototype.listName = function () { return "forEaches" }
 domrender.ForEacher.prototype.readInputIE = function () { 
   for (j=0; j<this.compileds.length; j++) {
     domrender.readAllInputs(this.compileds[j])
@@ -296,6 +309,7 @@ domrender.BoundInput.prototype.process = function (d, scope, loopScope, index, f
       }
     }
 }
+domrender.BoundInput.prototype.listName = function () { return "inputs" }
 domrender.BoundInput.prototype.readInputIE = function () {
   var input = this
   if (input.el.value != input.el.ieOldValue) { // ie8
@@ -306,7 +320,15 @@ domrender.BoundInput.prototype.readInputIE = function () {
 domrender.compile = function(el, parentD) {
     var d = {
       renderCallbacks: [], 
-      boundThings: [],
+      boundThings: [], // TODO IE8 input fix
+
+      generalBookKeepings: [],
+      attributesEtc: [],
+      childComponents: [],
+      dynamicComponents: [],
+      forEaches: [],
+      inputs: [],
+
       el: el
     }
     el._domrender = d
@@ -315,10 +337,15 @@ domrender.compile = function(el, parentD) {
     } else {
         d.root = d
     }
-    domrender.saveExpressions(d, el)
+    domrender.saveExpressions(d, el, 0)
     return d
 }
 domrender.getLastObjAndKey = function (me, expr) {
+    if (expr.charAt(0) == "~") {
+        me = domrender.rootScope
+        expr = expr.slice(1) 
+    }
+
     var dotParts = expr.split(".")
     if (dotParts[0] === "helpers") {
         me = domrender.rootScope; // this is ok because it changes every time you call render
@@ -362,6 +389,9 @@ domrender.eval = function (me, expr, a, b, c) {
     return ret
 }
 domrender.eval2 = function(me, expr, a, b, c) {
+    if (expr == "this") {
+        return me 
+    }
     var lastObjAndKey = domrender.getLastObjAndKey(me, expr)
     if (!lastObjAndKey || !lastObjAndKey[0]) {
         return null 
@@ -394,36 +424,60 @@ domrender.camelCase = function (val) {
 domrender.render = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
     // if scope is immutable and hasn't changed, skip the render
     domrender.rootScope = d.root.scope;
-    for (var i=0; i<d.boundThings.length; i++) {
-      d.boundThings[i].process(d, scope, loopScope, index, forEachItemName, forEachItemIndex) 
+
+    var lists = ["generalBookKeepings", "attributesEtc", "childComponents", "dynamicComponents", "forEaches", "inputs"]
+    for (var i=0; i<lists.length; i++) {
+        var list = d[lists[i]]
+        for (var j=0; j<list.length; j++) {
+           list[j].process(d, scope, loopScope, index, forEachItemName, forEachItemIndex)
+        }
     }
+
+    //for (var i=0; i<d.boundThings.length; i++) {
+    //  d.boundThings[i].process(d, scope, loopScope, index, forEachItemName, forEachItemIndex) 
+    //}
 }
 domrender.specialAttrs = {"@scope": 1, "@foreachitemname": 1, "@foreachitemindex": 1}
-domrender.saveExpressions = function (d, el) {
+domrender.saveExpressions = function (d, el, level) {
     if (el.nodeName == "#comment") { // ie8
       return
     }
     var attrs = el.attributes 
     var markedElement = false
+    var shouldCompileChildren = true
     for (var i = 0; i < attrs.length; i++) {
         var attr = attrs[i]
         if (attr.name[0] == "@") {
             if (!markedElement) {
-              d.boundThings.push(domrender.create(domrender.BoundElementGeneral, {el: el})) // for bookkeeping things
+              var boundThing = domrender.create(domrender.BoundElementGeneral, {el: el})
+              d.boundThings.push(boundThing) // for bookkeeping things
+              d.generalBookKeepings.push(boundThing)
               markedElement = true
             }
             if (domrender.specialAttrs[attr.name]) {
                 continue;
             }
             var boundThing = domrender.createBoundThingFromAttribute(attr.name, attr.value, el, d)
+            if (boundThing.preventChildCompile) {
+                shouldCompileChildren = false 
+            }
+            if (boundThing == domrender.stop)  {
+                return boundThing
+            }
             if (boundThing) {
               d.boundThings.push(boundThing)
+                d[boundThing.listName()].push(boundThing)
             }
         }
     }
-    for (var i = 0; i < el.children.length; i++) {
-        domrender.saveExpressions(d, el.children[i])
-    }   
+    if (shouldCompileChildren) {
+        for (var i = 0; i < el.children.length; i++) {
+            var ret = domrender.saveExpressions(d, el.children[i], level + 1)
+            if (ret == domrender.stop) {
+                break 
+            }
+        }   
+    }
 }
 domrender.attributeBoundThingMap = {
   "@e": function (name, value, el) {
@@ -507,7 +561,7 @@ domrender.attributeBoundThingMap = {
       cloned.removeAttribute("id")
       el.appendChild(cloned)
       var childD = domrender.compile(cloned, d)
-      return domrender.create(domrender.Component, {el: el, childEl: cloned, scopeExpr: el.getAttribute("@scope"), d: childD})
+      return domrender.create(domrender.Component, {el: el, childEl: cloned, scopeExpr: el.getAttribute("@scope"), d: childD, preventChildCompile: true})
   },
   "@dynamiccomponent": function (name, value, el) {
     return domrender.create(domrender.DynamicComponent, {el: el, componentExpr: value, scopeExpr: el.getAttribute("@scope")})
@@ -525,6 +579,7 @@ domrender.attributeBoundThingMap = {
     // not returning anything
   }
 }
+domrender.stop = {}
 domrender.createBoundThingFromAttribute = function (name, value, el, d) {
   if (name.charAt(1) == "?") {
     return domrender.create(domrender.BoundExistsAttribute, {expr: value, attr: name.slice(2), el: el})
