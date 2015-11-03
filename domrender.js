@@ -425,13 +425,13 @@ domrender.saveExpressions = function (d, el, level) {
                 continue;
             }
             var boundThing = domrender.createBoundThingFromAttribute(attr.name, attr.value, el, d)
-            if (boundThing.preventChildCompile) {
-                shouldCompileChildren = false 
-            }
             if (boundThing == domrender.stop)  {
                 return boundThing
             }
             if (boundThing) {
+                if (boundThing.preventChildCompile) {
+                    shouldCompileChildren = false 
+                }
               d.boundThings.push(boundThing)
             }
         }
