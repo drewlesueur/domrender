@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+
+<!-- Step 1. Include domrender.js -->
+<script src="../domrender.js"></script>
+
+<!-- Step 2. Make a template in html -->
+<div id="click-app">
+  <button @e onclick="handleClick()">Click Me</button>
+  <button @e onclick="noActionClick()">No Action</button>
+  <br>
+  You clicked the button <span @v=s.clicks></span> times.
+</div>
+
+<script>
+// Step 3. Make a JavaScript model
+var myClickApp = {
+  s: {clicks: 0},
+  handleClick: function () {
+    var s = myClickApps.s
+    myClickApp.s = s.set('clicks', s.get('clicks') + 1)
+    myView.render() // call render after update
+  },
+  noActionClick: function () {
+    myView.render() // call render after update
+  }
+}
+
+// Step 4. Bind the model to the dom element
+var el = document.getElementById("click-app")
+var myView = domrender.use(el, myClickApp)
+
+</script>
+
+</body>
+</html>

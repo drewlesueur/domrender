@@ -41,8 +41,8 @@
            <span @v=p.firstName></span> <span @v=p.lastName></span>'s favorite fruit is <span @v=p.favoriteFruit></span>.
            <br> Their favorite color is <span @v=p.favoriteColor></span>
            <br>
-           <span @visible="p.isVegetarian">And they are vegetarian</span>
-           <span @visible="!p.isVegetarian">And they are not vegetarian</span>
+           <span @visible="p.isVegetarian">And they are vegetarian <span @v=p.isVegetarian></span></span>
+           <span @visible="!p.isVegetarian">And they are not vegetarian <span @v=p.isVegetarian></span></span>
           <div>
         </div>
      </td>

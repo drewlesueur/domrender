@@ -210,6 +210,7 @@ domrender.EventElement.prototype.process = function (d, scope, loopScope, index,
     }
 }
 domrender.ForEacher.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) { // put this on the boundelementgeneral?
+    // key optimization?
     var forEacher = this
     var itemsToLoop = domrender.eval(scope, forEacher.scopeExpr)
     if (!itemsToLoop) {
