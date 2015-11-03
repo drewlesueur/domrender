@@ -82,6 +82,7 @@ domrender.BoundVisible = function () {}
 domrender.BoundHidden = function () {}
 domrender.BoundAccess = function () {}
 domrender.BoundElementGeneral = function () {}
+domrender.BoundDebug = function () {}
 domrender.BoundText.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
     var todo = this
     var newText = domrender.eval(scope, todo.expr, todo.el)
@@ -132,10 +133,10 @@ domrender.BoundStyle.prototype.process = function (d, scope, loopScope, index, f
     if (!todo.el.lastStyle) { // I don't know if it's faster to check previous style
         todo.el.lastStyle = {}
     }
-    var oldStyle = todo.el.lastStyle[styleName]
+    var oldStyle = todo.el.lastStyle[todo.styleName]
     if (oldStyle != newStyle) {
-        todo.el.style[todo.style] = newStyle
-        todo.el.lastStyle[todo.style] = newStyle
+        todo.el.style[todo.styleName] = newStyle
+        todo.el.lastStyle[todo.styleName] = newStyle
     }
 }
 domrender.BoundClass.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
@@ -169,8 +170,7 @@ domrender.BoundExistsAttribute.prototype.process = function (d, scope, loopScope
     }
 }
 domrender.BoundAccess.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
-  var todo = this
-  domrender.set(scope, todo.expr, todo.el)
+  domrender.set(scope, this.expr, this.el)
 }
 domrender.BoundAttribute.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
   var todo = this
@@ -178,6 +178,135 @@ domrender.BoundAttribute.prototype.process = function (d, scope, loopScope, inde
     oldAttrValue = todo.el.getAttribute(todo.attr)
     if (oldAttrValue != attrValue) {
         todo.el.setAttribute(todo.attr, attrValue)
+    }
+}
+domrender.BoundDebug.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
+  debugger
+}
+domrender.BoundElementGeneral.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
+  var todo = this
+  if (loopScope) {
+      todo.el._scope = loopScope
+      todo.el._index = index
+      todo.el._parentScope = scope
+      todo.el[forEachItemName] = loopScope
+      todo.el[forEachItemIndex] = index
+  } else {
+      todo.el._scope = scope
+  }
+  todo.el._root = d.root.scope //todo.el._rootEl = d.root
+  todo.el._domrender = d 
+}
+domrender.Component.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
+    domrender.render(this.d, domrender.eval(scope, this.scopeExpr)) // no passing in loop scope?
+}
+domrender.DynamicComponent.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
+    var dynComp = this
+    var componentName = domrender.eval(scope, dynComp.componentExpr)
+    if (dynComp.lastComponentName != componentName) { // compile it and save it to the dom
+        dynComp.el.innerHTML = ""
+        var componentNode = document.getElementById(componentName)
+        if (componentNode) {
+            var cloned = componentNode.cloneNode(true)
+            cloned.removeAttribute("id") // 
+            var childD = domrender.compile(cloned, d) // TODO: you could cache the compiled value
+            dynComp.d = childD  
+            dynComp.childEl = cloned
+            dynComp.el.appendChild(cloned)
+        } else {
+            dynComp.d = null
+        }
+        dynComp.lastComponentName = componentName
+    }
+    if (dynComp.d) {
+        var componentScope = domrender.eval(scope, dynComp.scopeExpr) // TODO: cache component scope, but it could be a function
+        domrender.render(dynComp.d, componentScope)
+    }
+}
+domrender.EventElement.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) { // put this on the boundelementgeneral?
+    for (var x in scope) { // this is slower for huge lists, don't use @e in big loops
+        this.el[this.prefix + x] = scope[x] 
+    }
+}
+domrender.ForEacher.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) { // put this on the boundelementgeneral?
+    var forEacher = this
+    var itemsToLoop = domrender.eval(scope, forEacher.scopeExpr)
+    if (!itemsToLoop) {
+        continue 
+    }
+    var existingElementLength = forEacher.el.children.length
+    var needElementLength = itemsToLoop.length
+    // remove extra ones
+    for (var j=needElementLength; j<existingElementLength; j++) { 
+        forEacher.el.removeChild(forEacher.compileds[j].el)
+        // TODO: consider keeping it around for a while. have a pool of ones to reuse?
+        forEacher.compileds[j] = null // TODO: you can slice it out before or afterwards, or keep in around in conjunction with the elToRemove
+    }
+    // add needed ones
+    for (var j=existingElementLength; j<needElementLength; j++) {
+        var cloned = forEacher.childEl.cloneNode(true)
+        var newD = domrender.compile(cloned, d)
+        forEacher.compileds[j] = newD
+        forEacher.el.appendChild(cloned)
+    }
+    // render
+    for (var j=0; j<itemsToLoop.length; j++) {
+        var item = itemsToLoop[j]
+        var eachD = forEacher.compileds[j]
+        scope[forEacher.forEachItemName] = item
+        scope[forEacher.forEachItemIndex] = j
+        domrender.render(eachD, scope, item, j, forEacher.forEachItemName, forEacher.forEachItemIndex)    
+    }
+}
+domrender.BoundInput.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) { // put this on the boundelementgeneral?
+    var inputter = this
+    var shouldValue = domrender.eval(scope, inputter.name) // doing it this way because could be in loop.
+    if (loopScope && !inputter.el.nameUpdatedForLoop) { // you could add this when it adds the element for the loop?
+        inputter.el.name = inputter.el.name + "__" + index
+        inputter.el.nameUpdatedForLoop = true
+    }
+    if (inputter.el.type == "checkbox") {
+      var currVal = inputter.el.form[inputter.el.name].checked
+      if (currVal != shouldValue) {
+          inputter.el.form[inputter.el.name].checked = shouldValue
+      }
+    } else {
+      var currVal = inputter.el.form[inputter.el.name].value
+      if (currVal != shouldValue) {
+          if (window.attachEvent) { // IE8
+            if (inputter.el.nodeName == "SELECT") {
+              var select = inputter.el.form[inputter.el.name]
+              for (var si=0; si<select.options.length; si++) {
+                if (select.options[si].value == shouldValue) {
+                  select.selectedIndex = si
+                  break 
+                } 
+              }
+            } else if (inputter.el.type == "radio") {
+                var radios = inputter.el.form[inputter.el.name]
+                for (var ri=0; ri <radios.length; ri++) {
+                  if (radios[ri].value == shouldValue) {
+                    radios[ri].checked = true 
+                    break 
+                  } 
+                }
+            } else {
+              inputter.el.form[inputter.el.name].value = shouldValue
+            }
+          } else {
+            if (inputter.el.type == "radio") { // duplicated code for now, don't have to do this if the default value for radio is the same as the first option
+                var radios = inputter.el.form[inputter.el.name] 
+                for (var ri=0; ri <radios.length; ri++) {
+                  if (radios[ri].value == shouldValue) {
+                    radios[ri].checked = true 
+                    break 
+                  } 
+                }
+            } else {
+              inputter.el.form[inputter.el.name].value = shouldValue
+            }
+          }
+      }
     }
 }
 domrender.compile = function(el, parentD) {
@@ -272,189 +401,11 @@ domrender.render = function (d, scope, loopScope, index, forEachItemName, forEac
     for (var i=0; i<d.boundThings.length; i++) {
       d.boundThings[i].process(d, scope, loopScope, index, forEachItemName, forEachItemIndex) 
     }
-
-    for (var i=0; i<d.expressionsAndElements.length; i++) {
-        var todo = d.expressionsAndElements[i]
-        if (loopScope) { // TODO: only call this once per el.
-            todo.el._scope = loopScope
-            todo.el._index = index
-            todo.el._parentScope = scope
-            todo.el[forEachItemName] = loopScope
-            todo.el[forEachItemIndex] = index
-        } else { // TODO: only call this once per el.
-            todo.el._scope = scope
-        }
-        todo.el._root = d.root.scope //todo.el._rootEl = d.root
-        todo.el._domrender = d // already done?
-    }
-    for (var i=0; i<d.childComponents.length; i++) {
-        var childComponent = d.childComponents[i]
-        var childD = childComponent.d
-        var childScope = domrender.eval(scope, childComponent.scopeExpr)
-        domrender.render(childD, childScope)
-    }
-    for (var i=0; i<d.dynamicComponents.length; i++) {
-        var dynComp = d.dynamicComponents[i]
-        var componentName = domrender.eval(scope, dynComp.componentExpr)
-        if (dynComp.lastComponentName != componentName) { // compile it and save it to the dom
-            dynComp.el.innerHTML = ""
-            var componentNode = document.getElementById(componentName)
-            if (componentNode) {
-                var cloned = componentNode.cloneNode(true)
-                cloned.removeAttribute("id") // 
-                var childD = domrender.compile(cloned, d) // TODO: you could cache the compiled value
-                dynComp.d = childD  
-                dynComp.childEl = cloned
-                dynComp.el.appendChild(cloned)
-            } else {
-                dynComp.d = null
-            }
-            dynComp.lastComponentName = componentName
-        }
-        if (dynComp.d) {
-            var componentScope = domrender.eval(scope, dynComp.scopeExpr) // TODO: cache component scope, but it could be a function
-            domrender.render(dynComp.d, componentScope)
-        }
-    }
-    for (var i=0; i<d.eventElements.length; i++) {
-        var eventElInfo = d.eventElements[i]
-        for (var x in scope) { // this is slower for huge lists, don't use @e in big loops
-            eventElInfo.el[eventElInfo.prefix + x] = scope[x] 
-        }
-    }
-    for (var i=0; i<d.forEaches.length; i++) {
-        var forEacher = d.forEaches[i]
-        var itemsToLoop = domrender.eval(scope, forEacher.scopeExpr)
-        if (!itemsToLoop) {
-            continue 
-        }
-        var existingElementLength = forEacher.el.children.length
-        var needElementLength = itemsToLoop.length
-        // remove extra ones
-        for (var j=needElementLength; j<existingElementLength; j++) { 
-            forEacher.el.removeChild(forEacher.compileds[j].el)
-            // TODO: consider keeping it around for a while. have a pool of ones to reuse?
-            forEacher.compileds[j] = null // TODO: you can slice it out before or afterwards, or keep in around in conjunction with the elToRemove
-        }
-        // add needed ones
-        for (var j=existingElementLength; j<needElementLength; j++) {
-            var cloned = forEacher.childEl.cloneNode(true)
-            var newD = domrender.compile(cloned, d)
-            forEacher.compileds[j] = newD
-            forEacher.el.appendChild(cloned)
-        }
-        // render
-        for (var j=0; j<itemsToLoop.length; j++) {
-            var item = itemsToLoop[j]
-            var eachD = forEacher.compileds[j]
-            scope[forEacher.forEachItemName] = item
-            scope[forEacher.forEachItemIndex] = j
-            domrender.render(eachD, scope, item, j, forEacher.forEachItemName, forEacher.forEachItemIndex)    
-        }
-    }
-    for (var i=0; i<d.inputs.length; i++) {
-        var inputter = d.inputs[i]
-        var shouldValue = domrender.eval(scope, inputter.name) // doing it this way because could be in loop.
-        if (loopScope && !inputter.el.nameUpdatedForLoop) { // you could add this when it adds the element for the loop?
-            inputter.el.name = inputter.el.name + "__" + index
-            inputter.el.nameUpdatedForLoop = true
-        }
-        if (inputter.el.type == "checkbox") {
-          var currVal = inputter.el.form[inputter.el.name].checked
-          if (currVal != shouldValue) {
-              inputter.el.form[inputter.el.name].checked = shouldValue
-          }
-        } else {
-          var currVal = inputter.el.form[inputter.el.name].value
-          if (currVal != shouldValue) {
-              if (window.attachEvent) { // IE8
-                if (inputter.el.nodeName == "SELECT") {
-                  var select = inputter.el.form[inputter.el.name]
-                  for (var si=0; si<select.options.length; si++) {
-                    if (select.options[si].value == shouldValue) {
-                      select.selectedIndex = si
-                      break 
-                    } 
-                  }
-                } else if (inputter.el.type == "radio") {
-                    var radios = inputter.el.form[inputter.el.name]
-                    for (var ri=0; ri <radios.length; ri++) {
-                      if (radios[ri].value == shouldValue) {
-                        radios[ri].checked = true 
-                        break 
-                      } 
-                    }
-                } else {
-                  inputter.el.form[inputter.el.name].value = shouldValue
-                }
-              } else {
-                if (inputter.el.type == "radio") { // duplicated code for now, don't have to do this if the default value for radio is the same as the first option
-                    var radios = inputter.el.form[inputter.el.name] 
-                    for (var ri=0; ri <radios.length; ri++) {
-                      if (radios[ri].value == shouldValue) {
-                        radios[ri].checked = true 
-                        break 
-                      } 
-                    }
-                } else {
-                  inputter.el.form[inputter.el.name].value = shouldValue
-                }
-              }
-          }
-        }
-    }
 }
 domrender.specialAttrs = {component: 1, scope: 1, foreach: 1, foreachitemname: 1, foreachitemindex: 1, dynamiccomponent: 1, onmount: 1}
 domrender.saveExpressions = function (d, el) {
     if (el.nodeName == "#comment") { // ie8
       return
-    }
-    if (el.nodeName == "INPUT" || el.nodeName == "TEXTAREA" || el.nodeName == "SELECT") {
-        if (el.hasAttribute("@bind")) {
-            var bindName = el.getAttribute("name")
-            d.boundThings.push(domrender.create(domrender.BoundInput, {el: el, name: bindName}))
-            // begin 2-way binding two-way two way. Multiselects are not supported, as of now
-            var handleChange = function () {
-                if (el._parentScope) { // if it's in a loop, then you are most likely binding to the foreachitemname
-                    var usedBindName = bindName + "__" + el._index
-                    var usedScope = el // yes the actaul element
-                } else {
-                    var usedBindName = bindName
-                    var usedScope = el._scope
-                }
-                if (el.type == "checkbox") {
-                    var value = el.form[usedBindName].checked
-                } else if (window.attachEvent && el.type == "select-one") { // have to do this because of ie8
-                  var value = el.form[usedBindName].options[el.form[usedBindName].selectedIndex].value
-                } else if (el.type == "radio") { //chrome doesn't need this ie and safari do.
-                    var value = el.value
-                } else {
-                  var value = el.form[usedBindName].value
-                }
-                domrender.set(usedScope, bindName, value)
-                d.root.render() // render the lot
-                return true;
-            }
-            if (el.attachEvent) { // ie8
-              if (el.type == "checkbox" || el.type == "radio") {
-                  el.attachEvent('onchange', handleChange) 
-                  el.attachEvent('onclick', function () {
-                    this.focus()
-                    this.blur()
-                  }) 
-              } else {
-                  el.attachEvent('onchange', handleChange)
-              }
-              el.ieHandleChange = handleChange
-              el.ieOldValue = el.value 
-            } else {
-              if (el.type == "checkbox" || el.type == "radio") {
-                  el.addEventListener('change', handleChange) 
-              } else {
-                  el.addEventListener('input', handleChange)
-              }
-            }
-        }
     }
     var componentAttr = el.getAttribute("@component")
     if (componentAttr) {
@@ -503,7 +454,6 @@ domrender.saveExpressions = function (d, el) {
         domrender.saveExpressions(d, el.children[i])
     }   
 }
-
 domrender.attributeBoundThingMap = {
   "@e": function (name, value, el) {
     return domrender.create(domrender.EventElement, {el: el, prefix: value || ""}) 
@@ -521,7 +471,7 @@ domrender.attributeBoundThingMap = {
     domrender.create(domrender.BoundVisible, {expr: value, el: el}) 
   },
   "@style": function (name, value, el, name2) {
-    return domrender.create(domrender.BoundStyle, {expr: value, style: domrender.camelCase(name2), el: el})
+    return domrender.create(domrender.BoundStyle, {expr: value, styleName: domrender.camelCase(name2), el: el})
   },
   "@class": function (name, value, el, name2) {
     return domrender.create(domrender.BoundClass, {expr: value, className: domrender.camelCase(name2), el: el})
@@ -529,6 +479,55 @@ domrender.attributeBoundThingMap = {
   "@access": function (name, value, el) {
     return domrender.create(domrender.BoundAccess, {name: value, el: el})
   }
+  "@debug": function (name, value, el) {
+    return domrender.create(domrender.BoundDebug, {name: value, el: el})
+  },
+  "@bind": function (name, value, el) {
+        var bindName = name
+        // begin 2-way binding two-way two way. Multiselects are not supported, as of now
+        var handleChange = function () {
+            if (el._parentScope) { // if it's in a loop, then you are most likely binding to the foreachitemname
+                var usedBindName = bindName + "__" + el._index
+                var usedScope = el // yes the actaul element
+            } else {
+                var usedBindName = bindName
+                var usedScope = el._scope
+            }
+            if (el.type == "checkbox") {
+                var value = el.form[usedBindName].checked
+            } else if (window.attachEvent && el.type == "select-one") { // have to do this because of ie8
+              var value = el.form[usedBindName].options[el.form[usedBindName].selectedIndex].value
+            } else if (el.type == "radio") { //chrome doesn't need this ie and safari do.
+                var value = el.value
+            } else {
+              var value = el.form[usedBindName].value
+            }
+            domrender.set(usedScope, bindName, value)
+            d.root.render() // render the lot
+            return true;
+        }
+        if (el.attachEvent) { // ie8
+          if (el.type == "checkbox" || el.type == "radio") {
+              el.attachEvent('onchange', handleChange) 
+              el.attachEvent('onclick', function () {
+                this.focus()
+                this.blur()
+              }) 
+          } else {
+              el.attachEvent('onchange', handleChange)
+          }
+          el.ieHandleChange = handleChange
+          el.ieOldValue = el.value 
+        } else {
+          if (el.type == "checkbox" || el.type == "radio") {
+              el.addEventListener('change', handleChange) 
+          } else {
+              el.addEventListener('input', handleChange)
+          }
+        }
+        return domrender.create(domrender.BoundInput, {el: el, name: bindName}))
+  }
+
 }
 domrender.createBoundThingFromAttribute = function (name, value, el) {
   if (name.charAt(1) == "?") {
