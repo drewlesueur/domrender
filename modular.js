@@ -39,24 +39,10 @@ domrender.readAllInputs=function(d) {
     if (!d) {
       return 
     }
-    for (var i=0; i<d.inputs.length;i++) {
-      var input = d.inputs[i]  
-      if (input.el.type == "text") {
-        if (input.el.value != input.el.ieOldValue) { // ie8
-          input.el.ieOldValue = input.el.value 
-          input.el.ieHandleChange()
-        } 
-      }
-    }  
-    for (var i=0; i<d.childComponents.length;i++) {
-      domrender.readAllInputs(d.childComponents[i].d)
-    }
-    for (var i=0; i<d.dynamicComponents.length;i++) {
-      domrender.readAllInputs(d.dynamicComponents[i].d)
-    }
-    for (var i=0; i<d.forEaches.length;i++) {
-      for (j=0; j<d.forEaches[i].compileds.length; j++) {
-        domrender.readAllInputs(d.forEaches[i].compileds[j])
+    for (var i=0; i<d.boundThings.length;i++) {
+      var boundThing = d.boundThings[i]
+      if (boundThing.readInputIE) {
+        boundThing.readInputIE()
       }
     }
 }
@@ -200,6 +186,9 @@ domrender.BoundElementGeneral.prototype.process = function (d, scope, loopScope,
 domrender.Component.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
     domrender.render(this.d, domrender.eval(scope, this.scopeExpr)) // no passing in loop scope?
 }
+domrender.Component.prototype.readInputIE = function () {
+  domrender.readAllInputs(this.d)
+}
 domrender.DynamicComponent.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
     var dynComp = this
     var componentName = domrender.eval(scope, dynComp.componentExpr)
@@ -222,6 +211,9 @@ domrender.DynamicComponent.prototype.process = function (d, scope, loopScope, in
         var componentScope = domrender.eval(scope, dynComp.scopeExpr) // TODO: cache component scope, but it could be a function
         domrender.render(dynComp.d, componentScope)
     }
+}
+domrender.DynamicComponent.prototype.readInputIE = function () {
+  domrender.readAllInputs(this.d)
 }
 domrender.EventElement.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) { // put this on the boundelementgeneral?
     for (var x in scope) { // this is slower for huge lists, don't use @e in big loops
@@ -257,6 +249,11 @@ domrender.ForEacher.prototype.process = function (d, scope, loopScope, index, fo
         scope[forEacher.forEachItemIndex] = j
         domrender.render(eachD, scope, item, j, forEacher.forEachItemName, forEacher.forEachItemIndex)    
     }
+}
+domrender.ForEacher.prototype.readInputIE = function () { 
+  for (j=0; j<this.compileds.length; j++) {
+    domrender.readAllInputs(this.compileds[j])
+  }
 }
 domrender.BoundInput.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) { // put this on the boundelementgeneral?
     var inputter = this
@@ -308,6 +305,13 @@ domrender.BoundInput.prototype.process = function (d, scope, loopScope, index, f
           }
       }
     }
+}
+domrender.BoundInput.prototype.readInputIE = function () {
+  var input = this
+  if (input.el.value != input.el.ieOldValue) { // ie8
+    input.el.ieOldValue = input.el.value 
+    input.el.ieHandleChange()
+  } 
 }
 domrender.compile = function(el, parentD) {
     var d = {}
@@ -402,26 +406,10 @@ domrender.render = function (d, scope, loopScope, index, forEachItemName, forEac
       d.boundThings[i].process(d, scope, loopScope, index, forEachItemName, forEachItemIndex) 
     }
 }
-domrender.specialAttrs = {component: 1, scope: 1, foreach: 1, foreachitemname: 1, foreachitemindex: 1, dynamiccomponent: 1, onmount: 1}
+domrender.specialAttrs = {"@scope": 1, "@foreachitemname": 1, "@foreachitemindex": 1}
 domrender.saveExpressions = function (d, el) {
     if (el.nodeName == "#comment") { // ie8
       return
-    }
-    var componentAttr = el.getAttribute("@component")
-    if (componentAttr) {
-        var componentNode = document.getElementById(componentAttr)
-        if (componentNode) {
-            var cloned = componentNode.cloneNode(true)
-            cloned.removeAttribute("id")
-            el.appendChild(cloned)
-            var childD = domrender.compile(cloned, d)
-            d.boundThings.push(domrender.create(domrender.Component, {el: el, childEl: cloned, scopeExpr: el.getAttribute("@scope"), d: childD}))
-        }
-        return
-    }
-    var dynamicComponentAttr = el.getAttribute("@dynamiccomponent")
-    if (dynamicComponentAttr) {
-        d.boundThings.push(domrender.create(domrender.DynamicComponent, {el: el, componentExpr: dynamicComponentAttr, scopeExpr: el.getAttribute("@scope")}))
     }
     var attrs = el.attributes 
     var markedElement = false
@@ -432,23 +420,14 @@ domrender.saveExpressions = function (d, el) {
               d.boundThings.push(domrender.create(domrender.BoundElementGeneral, {el: el})) // for bookkeeping things
               markedElement = true
             }
-            var attrName = attr.name.slice(1)
-            if (domrender.specialAttrs[attrName]) { // add bind here?
+            if (domrender.specialAttrs[attr.name]) {
                 continue;
             }
-            d.boundThings.push(domrender.createBoundThingFromAttribute(attr.name, attr.value, el))
-
-            //d.boundThings.push(domrender.create(domrender.BoundAttribute, {expr: valueName, el: el, attr: attrName}))
+            var boundThing = domrender.createBoundThingFromAttribute(attr.name, attr.value, el)
+            if (boundThing) {
+              d.boundThings.push(boundThing)
+            }
         }
-    }
-    var forEachValue = el.getAttribute("@foreach")
-    if (forEachValue) {
-        var forEachItemName = el.getAttribute("@foreachitemname")
-        var forEachItemIndex = el.getAttribute("@foreachitemindex")
-        var childEl = el.firstElementChild || el.children[0] // children0 for ie8 (might be comment)
-        childEl = childEl.cloneNode(true) // have to do this because of IE8, when you set innerHTML to "" it wipes the children if you don't clone it
-        el.innerHTML = "" // maybe remove the first node?
-        d.boundThings.push(domrender.create(domrender.ForEacher,{scopeExpr: forEachValue, el: el, childEl: childEl, forEachItemName: forEachItemName, forEachItemIndex: forEachItemIndex, compileds: []}))
     }
     for (var i = 0; i < el.children.length; i++) {
         domrender.saveExpressions(d, el.children[i])
@@ -526,18 +505,39 @@ domrender.attributeBoundThingMap = {
           }
         }
         return domrender.create(domrender.BoundInput, {el: el, name: bindName}))
+  },
+  "@component": function (name, value, el) {
+      var componentNode = document.getElementById(value)
+      if (!componentNode) {
+        return  null
+      }
+      var cloned = componentNode.cloneNode(true)
+      cloned.removeAttribute("id")
+      el.appendChild(cloned)
+      var childD = domrender.compile(cloned, d)
+      return domrender.create(domrender.Component, {el: el, childEl: cloned, scopeExpr: el.getAttribute("@scope"), d: childD})
+  },
+  "@dynamiccomponent": function (name, value, el) {
+    return domrender.create(domrender.DynamicComponent, {el: el, componentExpr: value, scopeExpr: el.getAttribute("@scope")})
+  },
+  "@foreach": function (name, value, el) {
+      var forEachItemName = el.getAttribute("@foreachitemname")
+      var forEachItemIndex = el.getAttribute("@foreachitemindex")
+      var childEl = el.firstElementChild || el.children[0] // children0 for ie8 (might be comment)
+      childEl = childEl.cloneNode(true) // have to do this because of IE8, when you set innerHTML to "" it wipes the children if you don't clone it
+      el.innerHTML = "" // maybe remove the first node?
+      return domrender.create(domrender.ForEacher,{scopeExpr: forEachValue, el: el, childEl: childEl, forEachItemName: forEachItemName, forEachItemIndex: forEachItemIndex, compileds: []})
   }
-
 }
 domrender.createBoundThingFromAttribute = function (name, value, el) {
   if (name.charAt(1) == "?") {
     return domrender.create(domrender.BoundExistsAttribute, {expr: value, attr: name.slice(2), el: el})
   }
-
   var nameParts = name.split(".")
   var name1 = nameParts[0]
   var name2 = nameParts[1] // only can have a.b style for now.
   var func = domrender.attributeBoundThingMap[name]
+  // regular old attrubutes
   if (!func || name == "@style" || name == "@class") { // full name is @style or @class
     return domrender.create(domrender.BoundAttribute, {expr: value, attr: name.slice(1), el: el})
   }
