@@ -1,0 +1,9 @@
+{
+  "name": "domrender",
+  "version": "0.0.1",
+  "author": "Drew LeSueur and Caleb Davis <drewalex@gmail.com>",
+  "contributors": [
+    {"name": "Caleb Davis", "email": ""}
+  ],
+  "main": "domrender.js"
+}
