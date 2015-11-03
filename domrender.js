@@ -217,7 +217,7 @@ domrender.ForEacher.prototype.process = function (d, scope, loopScope, index, fo
       return
     }
     var existingElementLength = forEacher.el.children.length
-    var needElementLength = itemsToLoop.length
+    var needElementLength = itemsToLoop.length || itemsToLoop.size
     // remove extra ones
     for (var j=needElementLength; j<existingElementLength; j++) { 
         forEacher.el.removeChild(forEacher.compileds[j].el)
@@ -233,7 +233,7 @@ domrender.ForEacher.prototype.process = function (d, scope, loopScope, index, fo
     }
     // render
     for (var j=0; j<itemsToLoop.length; j++) {
-        var item = itemsToLoop[j]
+        var item = domrender.access(itemsToLoop, j)
         var eachD = forEacher.compileds[j]
         scope[forEacher.forEachItemName] = item
         scope[forEacher.forEachItemIndex] = j
@@ -325,7 +325,7 @@ domrender.getLastObjAndKey = function (me, expr) {
     }
     for (var i = 0; i < dotParts.length - 1; i++) {
         var name = dotParts[i]
-        me = me[name]   
+        me = domrender.access(me, name)
         if (me === null) {
             return null
         }
@@ -333,9 +333,17 @@ domrender.getLastObjAndKey = function (me, expr) {
     var lastPart = dotParts[dotParts.length - 1]
     return [me, lastPart]
 }
+domrender.access = function (obj, val) {
+  if (obj.get) {
+    return obj.get(val) 
+  }
+  return obj[val]
+}
 domrender.evalFunc = function(me, expressions, a, b, c) {
     var lastObjAndKey = domrender.getLastObjAndKey(me, expressions[0])
-    var func =  lastObjAndKey[0][lastObjAndKey[1]]
+    var obj = lastObjAndKey[0]
+    var key = lastObjAndKey[1]
+    var func = domrender.acces(obj, key)
     var args = []
     for (var i = 1; i < expressions.length; i++) {
         args.push(domrender.eval2(me, expressions[i], a, b, c))
@@ -366,13 +374,18 @@ domrender.eval2 = function(me, expr, a, b, c) {
     if (!lastObjAndKey || !lastObjAndKey[0]) {
         return null 
     }
-    var me = lastObjAndKey[0][lastObjAndKey[1]]
+    var me = domrender.access(lastObjAndKey[0],lastObjAndKey[1])
     if ((typeof me) == "function") {
         return me(a, b, c)
     }
     return me
 }
 domrender.set = function (me, expr, value) {
+    // immutable doesn't use 2 way binding
+    //if (me.setIn) {
+    //  me.setIn(expr.split("."), value) 
+    //  return 
+    //}
     var lastObjAndKey = domrender.getLastObjAndKey(me, expr)
     var obj = lastObjAndKey[0]
     var key = lastObjAndKey[1]
@@ -392,6 +405,14 @@ domrender.camelCase = function (val) {
     return ret.join("")
 }
 domrender.render = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
+    if (scope && scope.isIterable()) { // for now assume that's immutable (immutability.js)
+      if (d.lastScope == scope) {
+        console.log("immutable no changes")
+        return
+      } else {
+        d.lastScope == scope 
+      }
+    }
     // if scope is immutable and hasn't changed, skip the render
     domrender.rootScope = d.root.scope;
     for (var i=0; i<d.boundThings.length; i++) {
