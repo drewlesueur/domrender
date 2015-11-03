@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+<div id="app">
+<form>
+  <input style="width: 320px;" type="text" @bind name="theText" @onreceive="logIt">
+  <!-- use @bind and name="" to get the 2 way binding -->
+</form>
+<!-- @v binds to the innerHTML, but cleans it -->
+<div @v="theText"></div>
+
+</div>
+<script src="../domrender.js"></script>
+<script>
+var myApp = {
+  logIt: function (scope, el, value) {
+    console.log("the value got changed to ", value) 
+    console.log(scope) 
+    console.log(el) 
+  },
+  theText: ""
+}
+var myView = domrender.use(document.getElementById('app'), myApp)
+</script>
+</body>
+</html>

@@ -471,6 +471,9 @@ domrender.attributeBoundThingMap = {
               var value = el.form[usedBindName].value
             }
             domrender.set(usedScope, bindName, value)
+            if (el._onreceiveExpr) {
+              domrender.eval(usedScope, el._onreceiveExpr, el._scope, el, value)
+            }
             d.root.render() // render the lot
             return true;
         }
@@ -516,6 +519,10 @@ domrender.attributeBoundThingMap = {
       childEl = childEl.cloneNode(true) // have to do this because of IE8, when you set innerHTML to "" it wipes the children if you don't clone it
       el.innerHTML = "" // maybe remove the first node?
       return domrender.create(domrender.ForEacher,{scopeExpr: value, el: el, childEl: childEl, forEachItemName: forEachItemName, forEachItemIndex: forEachItemIndex, compileds: []})
+  },
+  "@onreceive": function (name, value, el) {
+    el._onreceiveExpr = value
+    // not returning anything
   }
 }
 domrender.createBoundThingFromAttribute = function (name, value, el, d) {
