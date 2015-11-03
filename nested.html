@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+
+<body>
+<div id="main">
+    <div @component=box @scope=myBox data-foo="yoyo"></div>
+</div>
+<div style="display: none;">
+    <div id="box">
+        <div style="cursor: pointer;" @d onclick="_root.toggle(_scope)"><span @v="~symbol this"></span> <span @v=value></span></div>
+        <div @visible="!hidden" @foreach=boxes @foreachitemname=b @foreachitemindex=i style="margin-left: 50px;">
+            <div @component=box @scope=b></div>
+        </div>
+    </div>
+</div>
+<script src="../src/node_modules/domrender/domrender.js"></script>
+<script src2="olddomrender.js"></script>
+<script>
+var scope = {
+    toggle: function (box) {
+        box.hidden = !box.hidden
+        view.render()
+    },
+    symbol: function (box) {
+        if (!box.boxes || box.boxes.length == 0) {
+            return "" 
+        }
+
+        if (box.hidden) {
+            return "\u25B8"
+        } else {
+            return "\u25BE"
+        }
+
+    },
+    myBox: { 
+        value: "master box",
+        boxes: [
+            {
+                value: "foo",
+                boxes: [
+                    {
+                        value: "space" 
+                    } ,
+                    {
+                        value: "planet" 
+                    } ,
+                     
+                ]
+            },
+            {
+                value: "bar",
+                boxes: [
+                    {
+                        value: "inner" 
+                    } ,
+                    {
+                        value: "inner2" 
+                    } ,
+                ]
+            },
+        ]
+    }
+}
+var view = domrender.use(document.getElementById("main"), scope)
+</script>
+</body>
+</html>
