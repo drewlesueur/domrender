@@ -20,7 +20,6 @@ domrender.use = function (el, scope, options) {
     }
     var render = _render
     if (!options.preventAsyncRender) {
-        console.log("foo")
         render = function (callback) {
           clearTimeout(d.renderTimeout) 
           d.renderTimeout = setTimeout(function() { // requestAnimationFrame?
@@ -232,53 +231,53 @@ domrender.ForEacher.prototype.process = function (d, scope, loopScope, index, fo
         forEacher.compileds[j] = null // TODO: you can slice it out before or afterwards, or keep in around in conjunction with the elToRemove
     }
 
-    var loopLength = itemsToLoop.length 
-    if (existingElementLength < needElementLength) {
-      var frag = document.createDocumentFragment() 
-      for (var j=existingElementLength; j<needElementLength; j++) {
-          var item = itemsToLoop[j]
-          scope[forEacher.forEachItemName] = item
-          scope[forEacher.forEachItemIndex] = j
-          domrender.render(forEacher.exampleCompiled, scope, item, j, forEacher.forEachItemName, forEacher.forEachItemIndex)
-          var cloned = forEacher.childEl.cloneNode(true)
-          var newD = domrender.compile(cloned, d)
-          //domrender.render(newD, scope, item, j, forEacher.forEachItemName, forEacher.forEachItemIndex)
-          forEacher.compileds[j] = newD
-          frag.appendChild(cloned)
-          //forEacher.el.appendChild(cloned)
-      }
-      forEacher.el.appendChild(frag)
-      loopLength = existingElementLength 
-    }
-    // render
-
-    for (var j=0; j<loopLength; j++) {
-        var item = itemsToLoop[j]
-        var eachD = forEacher.compileds[j]
-        scope[forEacher.forEachItemName] = item
-        scope[forEacher.forEachItemIndex] = j
-        domrender.render(eachD, scope, item, j, forEacher.forEachItemName, forEacher.forEachItemIndex)    
-    }
-
+    //var loopLength = itemsToLoop.length 
     //if (existingElementLength < needElementLength) {
     //  var frag = document.createDocumentFragment() 
     //  for (var j=existingElementLength; j<needElementLength; j++) {
+    //      var item = itemsToLoop[j]
+    //      scope[forEacher.forEachItemName] = item
+    //      scope[forEacher.forEachItemIndex] = j
+    //      domrender.render(forEacher.exampleCompiled, scope, item, j, forEacher.forEachItemName, forEacher.forEachItemIndex)
     //      var cloned = forEacher.childEl.cloneNode(true)
     //      var newD = domrender.compile(cloned, d)
+    //      //domrender.render(newD, scope, item, j, forEacher.forEachItemName, forEacher.forEachItemIndex)
     //      forEacher.compileds[j] = newD
     //      frag.appendChild(cloned)
     //      //forEacher.el.appendChild(cloned)
     //  }
     //  forEacher.el.appendChild(frag)
+    //  loopLength = existingElementLength 
     //}
     //// render
-    //for (var j=0; j<itemsToLoop.length; j++) {
+
+    //for (var j=0; j<loopLength; j++) {
     //    var item = itemsToLoop[j]
     //    var eachD = forEacher.compileds[j]
     //    scope[forEacher.forEachItemName] = item
     //    scope[forEacher.forEachItemIndex] = j
     //    domrender.render(eachD, scope, item, j, forEacher.forEachItemName, forEacher.forEachItemIndex)    
     //}
+
+    if (existingElementLength < needElementLength) {
+      var frag = document.createDocumentFragment() 
+      for (var j=existingElementLength; j<needElementLength; j++) {
+          var cloned = forEacher.childEl.cloneNode(true)
+          var newD = domrender.compile(cloned, d)
+          forEacher.compileds[j] = newD
+          frag.appendChild(cloned)
+          //forEacher.el.appendChild(cloned)
+      }
+      forEacher.el.appendChild(frag)
+    }
+    // render
+    for (var j=0; j<itemsToLoop.length; j++) {
+        var item = itemsToLoop[j]
+        var eachD = forEacher.compileds[j]
+        scope[forEacher.forEachItemName] = item
+        scope[forEacher.forEachItemIndex] = j
+        domrender.render(eachD, scope, item, j, forEacher.forEachItemName, forEacher.forEachItemIndex)    
+    }
 }
 domrender.ForEacher.prototype.readInputIE = function () { 
   for (j=0; j<this.compileds.length; j++) {
@@ -578,9 +577,9 @@ domrender.attributeBoundThingMap = {
       var forEachItemIndex = el.getAttribute("@foreachitemindex")
       var childEl = el.firstElementChild || el.children[0] // children0 for ie8 (might be comment)
       childEl = childEl.cloneNode(true) // have to do this because of IE8, when you set innerHTML to "" it wipes the children if you don't clone it
-      var exampleCompiled = domrender.compile(childEl, d)
+      //var exampleCompiled = domrender.compile(childEl, d)
       el.innerHTML = "" // maybe remove the first node?
-      return domrender.create(domrender.ForEacher,{scopeExpr: value, el: el, childEl: childEl, forEachItemName: forEachItemName, forEachItemIndex: forEachItemIndex, compileds: [], exampleCompiled: exampleCompiled})
+      return domrender.create(domrender.ForEacher,{scopeExpr: value, el: el, childEl: childEl, forEachItemName: forEachItemName, forEachItemIndex: forEachItemIndex, compileds: []/*, exampleCompiled: exampleCompiled*/})
   },
   "@onreceive": function (name, value, el) {
     el._onreceiveExpr = value
