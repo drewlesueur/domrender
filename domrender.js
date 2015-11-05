@@ -1,3 +1,4 @@
+// ToDO: consider multiple children with foreach with document fragment
 var domrender = {}
 if (typeof module != "undefined") {
     module.exports = domrender;
@@ -7,6 +8,7 @@ domrender.use = function (el, scope, options) {
     var d = domrender.compile(el)
     d.scope = scope;
     var _render = function (callback) {
+        d.allInputs = [] // clear out the existing allinputs
         if (callback) {
           d.renderCallbacks.push(callback) 
         } 
@@ -45,11 +47,12 @@ domrender.readAllInputs=function(d) {
     if (!d) {
       return 
     }
-    for (var i=0; i<d.boundThings.length;i++) {
-      var boundThing = d.boundThings[i]
-      if (boundThing.readInputIE) {
-        boundThing.readInputIE()
-      }
+    for (var i=0; i<d.allInputs.length;i++) {
+      var el = d.allInputs[i]
+      if (el.value != el.ieOldValue) { // ie8
+        el.ieOldValue = el.value 
+        el.ieHandleChange()
+      } 
     }
 }
 domrender.create = function (Type, obj) {
@@ -60,6 +63,7 @@ domrender.create = function (Type, obj) {
   return ret
 }
 domrender.ForEacher = function() {}
+domrender.Repeater = function() {}
 domrender.DynamicComponent = function() {}
 domrender.BoundInput = function() {}
 domrender.Component = function() {}
@@ -181,9 +185,6 @@ domrender.BoundElementGeneral.prototype.process = function (d, scope, loopScope,
 domrender.Component.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
     domrender.render(this.d, domrender.eval(scope, this.scopeExpr)) // no passing in loop scope?
 }
-domrender.Component.prototype.readInputIE = function () {
-  domrender.readAllInputs(this.d)
-}
 domrender.DynamicComponent.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) {
     var dynComp = this
     var componentName = domrender.eval(scope, dynComp.componentExpr)
@@ -206,9 +207,6 @@ domrender.DynamicComponent.prototype.process = function (d, scope, loopScope, in
         var componentScope = domrender.eval(scope, dynComp.scopeExpr) // TODO: cache component scope, but it could be a function
         domrender.render(dynComp.d, componentScope)
     }
-}
-domrender.DynamicComponent.prototype.readInputIE = function () {
-  domrender.readAllInputs(this.d)
 }
 domrender.EventElement.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) { // put this on the boundelementgeneral?
     for (var x in scope) { // this is slower for huge lists, don't use @e in big loops
@@ -279,13 +277,46 @@ domrender.ForEacher.prototype.process = function (d, scope, loopScope, index, fo
         domrender.render(eachD, scope, item, j, forEacher.forEachItemName, forEacher.forEachItemIndex)    
     }
 }
-domrender.ForEacher.prototype.readInputIE = function () { 
-  for (j=0; j<this.compileds.length; j++) {
-    domrender.readAllInputs(this.compileds[j])
-  }
+domrender.Repeater.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) { // put this on the boundelementgeneral?
+    // THIS DOES NOT YET WORK
+    var forEacher = this
+    var itemsToLoop = domrender.eval(scope, forEacher.scopeExpr)
+    if (!itemsToLoop) {
+      return
+    }
+    var existingElementLength = forEacher.existingLength
+    var needElementLength = itemsToLoop.length
+    // remove extra ones
+    for (var j=needElementLength; j<existingElementLength; j++) { 
+        forEacher.parentNode.removeChild(forEacher.compileds[j].el)
+        // TODO: consider keeping it around for a while. have a pool of ones to reuse?
+        forEacher.compileds[j] = null // TODO: you can slice it out before or afterwards, or keep in around in conjunction with the elToRemove
+    }
+
+    if (existingElementLength < needElementLength) {
+      var frag = document.createDocumentFragment() 
+      for (var j=existingElementLength; j<needElementLength; j++) {
+          var cloned = forEacher.childEl.cloneNode(true)
+          var newD = domrender.compile(cloned, d)
+          forEacher.compileds[j] = newD
+          frag.appendChild(cloned)
+          //forEacher.el.appendChild(cloned)
+      }
+      forEacher.parentNode.appendChild(frag)
+    }
+    // render
+    for (var j=0; j<itemsToLoop.length; j++) {
+        var item = itemsToLoop[j]
+        var eachD = forEacher.compileds[j]
+        scope[forEacher.forEachItemName] = item
+        scope[forEacher.forEachItemIndex] = j
+        domrender.render(eachD, scope, item, j, forEacher.forEachItemName, forEacher.forEachItemIndex)    
+    }
+    forEacher.existingLength = itemsToLoop
 }
 domrender.BoundInput.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) { // put this on the boundelementgeneral?
     var inputter = this
+    d.root.allInputs.push(inputter.el) // for ie8
     var shouldValue = domrender.eval(scope, inputter.name) // doing it this way because could be in loop.
     if (loopScope && !inputter.el.nameUpdatedForLoop) { // you could add this when it adds the element for the loop?
         inputter.el.name = inputter.el.name + "__" + index
@@ -297,9 +328,9 @@ domrender.BoundInput.prototype.process = function (d, scope, loopScope, index, f
           inputter.el.form[inputter.el.name].checked = shouldValue
       }
     } else {
-      var currVal = inputter.el.form[inputter.el.name].value
+      var currVal = inputter.el.form[inputter.el.name].value // TODO: currVal could be wrong here!
       if (currVal != shouldValue) {
-          if (window.attachEvent) { // IE8
+          if (true || window.attachEvent) { // IE8
             if (inputter.el.nodeName == "SELECT") {
               var select = inputter.el.form[inputter.el.name]
               for (var si=0; si<select.options.length; si++) {
@@ -523,7 +554,7 @@ domrender.attributeBoundThingMap = {
             }
             if (el.type == "checkbox") {
                 var value = el.form[usedBindName].checked
-            } else if (window.attachEvent && el.type == "select-one") { // have to do this because of ie8
+            } else if (window.attachEvent && el.type == "select-one") { // have to do this because of ie
               var value = el.form[usedBindName].options[el.form[usedBindName].selectedIndex].value
             } else if (el.type == "radio") { //chrome doesn't need this ie and safari do.
                 var value = el.value
@@ -550,7 +581,7 @@ domrender.attributeBoundThingMap = {
           el.ieHandleChange = handleChange
           el.ieOldValue = el.value 
         } else {
-          if (el.type == "checkbox" || el.type == "radio") {
+          if (el.type == "checkbox" || el.type == "radio" || el.type == "select-one") {
               el.addEventListener('change', handleChange) 
           } else {
               el.addEventListener('input', handleChange)
@@ -580,6 +611,17 @@ domrender.attributeBoundThingMap = {
       //var exampleCompiled = domrender.compile(childEl, d)
       el.innerHTML = "" // maybe remove the first node?
       return domrender.create(domrender.ForEacher,{scopeExpr: value, el: el, childEl: childEl, forEachItemName: forEachItemName, forEachItemIndex: forEachItemIndex, compileds: []/*, exampleCompiled: exampleCompiled*/})
+  },
+  "@repeat": function (name, value, el, name2, d) {
+      // REPEAT does not yet work
+      var forEachItemName = el.getAttribute("@repeateritemname")
+      var forEachItemIndex = el.getAttribute("@repeateritemindex")
+      var childEl = el
+      var parentNode = el.parentNode()
+      childEl = childEl.cloneNode(true) // have to do this because of IE8, when you set innerHTML to "" it wipes the children if you don't clone it
+      //var exampleCompiled = domrender.compile(childEl, d)
+      el.innerHTML = "" // maybe remove the first node?
+      return domrender.create(domrender.Repeater,{els: [], parentNode: parentNode, existingLength: 0, scopeExpr: value, el: el, childEl: childEl, forEachItemName: forEachItemName, forEachItemIndex: forEachItemIndex, compileds: []/*, exampleCompiled: exampleCompiled*/})
   },
   "@onreceive": function (name, value, el) {
     el._onreceiveExpr = value
