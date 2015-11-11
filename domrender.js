@@ -389,8 +389,12 @@ domrender.compile = function(el, parentD) {
     return d
 }
 domrender.getLastObjAndKey = function (me, expr) {
-    if (expr.charAt(0) == "~") {
+    var firstChar = expr.charAt(0)
+    if (firstChar == "~") {
         me = domrender.rootScope
+        expr = expr.slice(1) 
+    } else if (firstChar == "^") {
+        me = window
         expr = expr.slice(1) 
     }
 
