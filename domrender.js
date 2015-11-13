@@ -63,6 +63,7 @@ domrender.create = function (Type, obj) {
   return ret
 }
 domrender.ForEacher = function() {}
+domrender.Switcher = function() {}
 domrender.Repeater = function() {}
 domrender.DynamicComponent = function() {}
 domrender.BoundInput = function() {}
@@ -277,6 +278,36 @@ domrender.ForEacher.prototype.process = function (d, scope, loopScope, index, fo
         domrender.render(eachD, scope, item, j, forEacher.forEachItemName, forEacher.forEachItemIndex)    
     }
 }
+domrender.Switcher.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) { // put this on the boundelementgeneral?
+    var matchingCase = false
+    for (var i=0; i<this.cases.length;i++) {
+      var theCase = this.cases[i] 
+      var match = domrender.eval(scope, theCase.case)
+      if (match) {
+        matchingCase = theCase
+        break;
+      }
+    }
+    if (!matchingCase) {
+      matchingCase = this.default 
+    }
+    if (!matchingCase) {
+      if (this.lastEl) {
+        this.lastEl.style.display = "none" 
+      }
+      return 
+    }
+    if (!matchingCase.d) {
+        matchingCase.d = domrender.compile(matchingCase.el, d)
+    }
+    
+    if (this.lastEl && this.lastEl != matchingCase.el) {
+      this.lastEl.style.display = "none" 
+    }
+    this.lastEl = matchingCase.el 
+    domrender.render(matchingCase.d, scope)
+    matchingCase.el.style.display = ""
+}
 domrender.Repeater.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) { // put this on the boundelementgeneral?
     // THIS DOES NOT YET WORK
     var forEacher = this
@@ -480,7 +511,7 @@ domrender.render = function (d, scope, loopScope, index, forEachItemName, forEac
       d.boundThings[i].process(d, scope, loopScope, index, forEachItemName, forEachItemIndex) 
     }
 }
-domrender.specialAttrs = {"@scope": 1, "@foreachitemname": 1, "@foreachitemindex": 1}
+domrender.specialAttrs = {"@scope": 1, "@foreachitemname": 1, "@foreachitemindex": 1, "@default": 1, "@case": 1}
 domrender.saveExpressions = function (d, el) {
     if (el.nodeName == "#comment") { // ie8
       return
@@ -630,6 +661,26 @@ domrender.attributeBoundThingMap = {
   "@onreceive": function (name, value, el) {
     el._onreceiveExpr = value
     // not returning anything
+  },
+  "@switch": function (name, value, el, name2, d) {
+      var children = el.children   
+      var cases = []
+      var theDefault
+      for (var i=0; i<children.length; i++) {
+        var el = children[i]
+        el.style.display = "none" // hide it
+        var theCase = {
+          d: null,//domrender.compile(el, d), // you could compile only when it
+          el: el,
+          "case": el.getAttribute("@case")
+        }
+        if (!theDefault && el.getAttribute("@default") === "") { // ie?
+          theDefault = theCase 
+        } else {
+          cases.push(theCase)
+        }
+      }
+      return domrender.create(domrender.Switcher, {el: el, cases: cases, "default": theDefault, preventChildCompile: true})
   }
 }
 domrender.stop = {}
