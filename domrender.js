@@ -1,4 +1,7 @@
-// ToDO: consider multiple children with foreach with document fragment
+// TODO: consider multiple children with foreach with document fragment
+// TODO: get repeater working?
+// TODO: rething the ~ and ^ special characters. Maybe replace with _window and _scope (also see 'helpers')
+// TODO: potentially make @flatten the default
 var domrender = {}
 if (typeof module != "undefined") {
     module.exports = domrender;
@@ -190,15 +193,32 @@ domrender.DynamicComponent.prototype.process = function (d, scope, loopScope, in
     var dynComp = this
     var componentName = domrender.eval(scope, dynComp.componentExpr)
     if (dynComp.lastComponentName != componentName) { // compile it and save it to the dom
-        dynComp.el.innerHTML = ""
+        dynComp.el.innerHTML = "" // best way to clear it out?
         var componentNode = document.getElementById(componentName)
         if (componentNode) {
             var cloned = componentNode.cloneNode(true)
-            cloned.removeAttribute("id") // 
-            var childD = domrender.compile(cloned, d) // TODO: you could cache the compiled value
+            // TODO: work on flattening
+            if (dynComp.el.getAttribute("@flatten")) {
+                var frag = document.createDocumentFragment()
+                var child
+                while (child = cloned.firstChild) {
+                    cloned.removeChild(child)
+                    frag.appendChild(child)
+                }
+                dynComp.el.appendChild(frag)
+                dynComp.el.removeAttribute("@dynamiccomponent")
+                dynComp.el.setAttribute("data-beta-dynamiccomponent", dynComp.componentExpr)
+                dynComp.el.setAttribute("data-beta-used-dynamiccomponent", componentName)
+                var childD = domrender.compile(dynComp.el, d)
+                dynComp.childEl = dynComp.el
+            } else {
+                cloned.removeAttribute("id") // 
+                dynComp.el.appendChild(cloned)
+                var childD = domrender.compile(cloned, d) // TODO: you could cache the compiled value
+                dynComp.childEl = cloned
+            }
+            
             dynComp.d = childD  
-            dynComp.childEl = cloned
-            dynComp.el.appendChild(cloned)
         } else {
             dynComp.d = null
         }
@@ -217,6 +237,10 @@ domrender.EventElement.prototype.process = function (d, scope, loopScope, index,
 domrender.ForEacher.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) { // put this on the boundelementgeneral?
     // key optimization?
     var forEacher = this
+    if (forEacher.forEachImmutable && forEacher.processed) {
+        return 
+    }
+    this.processed = true;
     var itemsToLoop = domrender.eval(scope, forEacher.scopeExpr)
     if (!itemsToLoop) {
       return
@@ -453,7 +477,7 @@ domrender.evalFunc = function(me, expressions, a, b, c) {
     if (!func) {
         return false;
     }
-    return func.apply(null, args)
+    return func.apply(lastObjAndKey[0], args)
 }
 domrender.eval = function (me, expr, a, b, c) {
     var opposite = (expr.substr(0, 1) == "!")
@@ -481,7 +505,8 @@ domrender.eval2 = function(me, expr, a, b, c) {
     }
     var me = lastObjAndKey[0][lastObjAndKey[1]]
     if ((typeof me) == "function") {
-        return me(a, b, c)
+        return me.call(lastObjAndKey[0], a, b, c)
+        //return me(a, b, c)
     }
     return me
 }
@@ -511,7 +536,7 @@ domrender.render = function (d, scope, loopScope, index, forEachItemName, forEac
       d.boundThings[i].process(d, scope, loopScope, index, forEachItemName, forEachItemIndex) 
     }
 }
-domrender.specialAttrs = {"@scope": 1, "@foreachitemname": 1, "@foreachitemindex": 1, "@default": 1, "@case": 1}
+domrender.specialAttrs = {"@scope": 1, "@foreachitemname": 1, "@foreachitemindex": 1, "@default": 1, "@case": 1, "@flatten": 1, "@foreachimmutable": 1}
 domrender.saveExpressions = function (d, el) {
     if (el.nodeName == "#comment") { // ie8
       return
@@ -519,28 +544,32 @@ domrender.saveExpressions = function (d, el) {
     var attrs = el.attributes 
     var markedElement = false
     var shouldCompileChildren = true
-    for (var i = 0; i < attrs.length; i++) {
-        var attr = attrs[i]
-        if (attr.name[0] == "@") {
-            if (!markedElement) {
-              var boundThing = domrender.create(domrender.BoundElementGeneral, {el: el})
-              d.boundThings.push(boundThing) // for bookkeeping things
-              markedElement = true
-            }
-            if (domrender.specialAttrs[attr.name]) {
-                continue;
-            }
-            var boundThing = domrender.createBoundThingFromAttribute(attr.name, attr.value, el, d)
-            if (boundThing == domrender.stop)  {
-                return boundThing
-            }
-            if (boundThing) {
-                if (boundThing.preventChildCompile) {
-                    shouldCompileChildren = false 
+    if (attrs) {
+        for (var i = 0; i < attrs.length; i++) {
+            var attr = attrs[i]
+            if (attr.name[0] == "@") {
+                if (!markedElement) {
+                  var boundThing = domrender.create(domrender.BoundElementGeneral, {el: el})
+                  d.boundThings.push(boundThing) // for bookkeeping things
+                  markedElement = true
                 }
-              d.boundThings.push(boundThing)
+                if (domrender.specialAttrs[attr.name]) {
+                    continue;
+                }
+                var boundThing = domrender.createBoundThingFromAttribute(attr.name, attr.value, el, d)
+                if (boundThing == domrender.stop)  {
+                    return boundThing
+                }
+                if (boundThing) {
+                    if (boundThing.preventChildCompile) {
+                        shouldCompileChildren = false 
+                    }
+                  d.boundThings.push(boundThing)
+                }
             }
         }
+    
+    } else {
     }
     if (shouldCompileChildren) {
         for (var i = 0; i < el.children.length; i++) {
@@ -630,13 +659,28 @@ domrender.attributeBoundThingMap = {
         return  null
       }
       var cloned = componentNode.cloneNode(true)
-      cloned.removeAttribute("id")
-      el.appendChild(cloned)
-      var childD = domrender.compile(cloned, d)
-      return domrender.create(domrender.Component, {el: el, childEl: cloned, scopeExpr: el.getAttribute("@scope"), d: childD, preventChildCompile: true})
+      // TODO: consider making flatten the default
+      if (el.getAttribute("@flatten")) {
+        var frag = document.createDocumentFragment() 
+        var child
+        while (child = cloned.firstChild) {
+            cloned.removeChild(child)
+            frag.appendChild(child)
+        }
+        el.appendChild(frag)
+        var childEl = el // not frag 
+        el.removeAttribute("@component")
+        el.setAttribute("data-beta-usedcomponent", value) // interesting that I can't set attributes with @, at least in chrome
+      } else {
+          cloned.removeAttribute("id")
+          el.appendChild(cloned)
+          var childEl = cloned
+      }
+      var childD = domrender.compile(childEl, d)
+      return domrender.create(domrender.Component, {el: el, childEl: childEl, scopeExpr: el.getAttribute("@scope") || "this", d: childD, preventChildCompile: true})
   },
   "@dynamiccomponent": function (name, value, el) {
-    return domrender.create(domrender.DynamicComponent, {el: el, componentExpr: value, scopeExpr: el.getAttribute("@scope")})
+    return domrender.create(domrender.DynamicComponent, {el: el, componentExpr: value, scopeExpr: el.getAttribute("@scope") || "this"})
   },
   "@foreach": function (name, value, el, name2, d) {
       var forEachItemName = el.getAttribute("@foreachitemname")
@@ -645,7 +689,8 @@ domrender.attributeBoundThingMap = {
       childEl = childEl.cloneNode(true) // have to do this because of IE8, when you set innerHTML to "" it wipes the children if you don't clone it
       //var exampleCompiled = domrender.compile(childEl, d)
       el.innerHTML = "" // maybe remove the first node?
-      return domrender.create(domrender.ForEacher,{scopeExpr: value, el: el, childEl: childEl, forEachItemName: forEachItemName, forEachItemIndex: forEachItemIndex, compileds: []/*, exampleCompiled: exampleCompiled*/})
+      var forEachImmutable = el.getAttribute("@foreachimmutable")
+      return domrender.create(domrender.ForEacher,{forEachImmutable: forEachImmutable, scopeExpr: value, el: el, childEl: childEl, forEachItemName: forEachItemName, forEachItemIndex: forEachItemIndex, compileds: []/*, exampleCompiled: exampleCompiled*/})
   },
   "@repeat": function (name, value, el, name2, d) {
       // REPEAT does not yet work
