@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+<style>
+</style>
+<div id="app">
+  My favorite movie is <span id="m" @v=movie></span>
+</div>
+
+<div id="nonApp">
+</div>
+
+<script src="../domrender.js"></script>
+<script>
+
+var myApp = {
+  movie: "Star Wars"
+}
+
+var preventAsyncRender = false // try changing to true
+var myView = domrender.use(document.getElementById('app'), myApp, {preventInitialRender: true, preventAsyncRender: preventAsyncRender})
+
+myView.render(function () {
+  var div = document.createElement("div")
+  div.innerHTML = "callback1"
+  nonApp.appendChild(div)
+})
+
+myApp.movie = "The Force Awakens"
+
+myView.render(function () {
+  var div = document.createElement("div")
+  div.innerHTML = "callback2"
+  nonApp.appendChild(div)
+})
+
+</script>
+</body>
+</html>

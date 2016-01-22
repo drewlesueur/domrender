@@ -12,20 +12,23 @@ domrender.use = function (el, scope, options) {
     d.scope = scope;
     var _render = function (callback) {
         d.allInputs = [] // clear out the existing allinputs
-        if (callback) {
+        if (options.preventAsyncRender && callback) {
           d.renderCallbacks.push(callback) 
         } 
         var now = (new Date()).getTime();
         domrender.render(d, scope);
         var duration = (new Date()).getTime() - now
         var theCallback
-        while (theCallback = d.renderCallbacks.pop()) {
+        while (theCallback = d.renderCallbacks.shift()) {
           theCallback({duration: duration}) 
         }
     }
     var render = _render
     if (!options.preventAsyncRender) {
         render = function (callback) {
+          if (!options.preventAsyncRender && callback) {
+            d.renderCallbacks.push(callback) 
+          } 
           clearTimeout(d.renderTimeout) 
           d.renderTimeout = setTimeout(function() { // requestAnimationFrame?
             _render(callback)
