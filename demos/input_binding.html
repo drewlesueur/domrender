@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+<body>
+<pre id=w>
+Name: <input @b=name type="text"/>
+Letter: <select @b=letter id="s">
+<option value="A">A</option>
+<option value="B">B</option>
+<option value="C">C</option>
+</select>
+<input @b=inOrOut type="radio" value=out name=inOrOut> out
+<input @b=inOrOut type="radio" value=in name=inOrOut> in
+
+<input @b=veggies type="checkbox" value=v> veggies?
+<input @b=fruit type="checkbox"  value=f> fruit?
+
+My name is <span @v=name></span>.
+The letter is <span @v=letter></span>.
+I like to play <span @v=inOrOut></span>side.
+<span @visible=veggies>I like veggies</span>
+<span @visible=fruit>I like fruit</span>
+</pre>
+
+------------------------------------------------
+
+<pre id=w2>
+<div @foreach=people @foreachitemname=p @foreachitemindex=i>
+    <div>
+        Name: <input @b=p.name type="text"/>
+        Letter: <select @b=p.letter id="s">
+        <option value="A">A</option>
+        <option value="B">B</option>
+        <option value="C">C</option>
+        </select>
+        <input @b=p.inOrOut type="radio" value=out @name="getUniqueName i"> out
+        <input @b=p.inOrOut type="radio" value=in @name="getUniqueName i" > in
+
+        <input @b=p.veggies type="checkbox" value=v > veggies?
+        <input @b=p.fruit type="checkbox"  value=f> fruit?
+
+        My name is <span @v=p.name></span>.
+        The letter is <span @v=p.letter></span>.
+        I like to play <span @v=p.inOrOut></span>side.
+        <span @visible=p.veggies>I like veggies</span>
+        <span @visible=p.fruit>I like fruit</span>
+        ==================
+    </div>
+</div>
+</pre>
+
+<script src="../common/js/misc/domrender5.js"></script>
+<script>
+var scope = {
+    name: "Fred",
+    letter: "B",
+    inOrOut: "in",
+    veggies: true,
+    fruit: true
+}
+v = domrender.use(w, scope)
+
+
+var scope2 = {people: [],
+    getUniqueName: function (i) {
+        return "inOrOut_" + i 
+    }
+}
+for (var i=0; i<10; i++) {
+    var obj2 = {}
+    for (var k in scope) {
+        obj2[k] = scope[k] 
+    }
+    scope2.people.push(obj2) 
+}
+v2 = domrender.use(w2, scope2)
+</script>
+</body>
+</html>

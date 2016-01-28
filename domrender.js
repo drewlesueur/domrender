@@ -73,6 +73,7 @@ domrender.Switcher = function() {}
 domrender.Repeater = function() {}
 domrender.DynamicComponent = function() {}
 domrender.BoundInput = function() {}
+domrender.BoundInputAlt = function() {} // that doesn't require
 domrender.Component = function() {}
 domrender.BoundAttribute = function () {}
 domrender.EventElement = function () {}
@@ -309,14 +310,14 @@ domrender.Switcher.prototype.process = function (d, scope, loopScope, index, for
     var matchingCase = false
     for (var i=0; i<this.cases.length;i++) {
       var theCase = this.cases[i] 
-      var match = domrender.eval(scope, theCase.case)
+      var match = domrender.eval(scope, theCase["case"])
       if (match) {
         matchingCase = theCase
         break;
       }
     }
     if (!matchingCase) {
-      matchingCase = this.default 
+      matchingCase = this["default"]
     }
     if (!matchingCase) {
       if (this.lastEl) {
@@ -421,6 +422,37 @@ domrender.BoundInput.prototype.process = function (d, scope, loopScope, index, f
               inputter.el.form[inputter.el.name].value = shouldValue
             }
           }
+      }
+    }
+}
+domrender.BoundInputAlt.prototype.process = function (d, scope, loopScope, index, forEachItemName, forEachItemIndex) { // put this on the boundelementgeneral?
+    var inputter = this
+    d.root.allInputs.push(inputter.el) // for ie8
+    var shouldValue = domrender.eval(scope, inputter.name) // doing it this way because could be in loop.
+    if (inputter.el.type == "checkbox") {
+      var currVal = inputter.el.checked
+      if (currVal != shouldValue) {
+          inputter.el.checked = shouldValue
+      }
+    } else if (inputter.el.type == "radio") {
+        // you could break out of all other radios of the same name or something
+        if (inputter.el.value == shouldValue) {
+          inputter.el.checked = true
+        }
+    } else {
+      var currVal = inputter.el.value // TODO: currVal could be wrong here!, have to get more advanced
+      if (currVal != shouldValue) {
+        if (inputter.el.nodeName == "SELECT") {
+          var select = inputter.el
+          for (var si=0; si<select.options.length; si++) {
+            if (select.options[si].value == shouldValue) {
+              select.selectedIndex = si
+              break 
+            } 
+          }
+        } else {
+          inputter.el.value = shouldValue
+        }
       }
     }
 }
@@ -608,6 +640,7 @@ domrender.attributeBoundThingMap = {
   "@debug": function (name, value, el) {
     return domrender.create(domrender.BoundDebug, {name: value, el: el})
   },
+  // deprecated
   "@bind": function (name, value, el, name2, d) {
         var bindName = el.getAttribute("name")
         // begin 2-way binding two-way two way. Multiselects are not supported, as of now
@@ -655,6 +688,53 @@ domrender.attributeBoundThingMap = {
           }
         }
         return domrender.create(domrender.BoundInput, {el: el, name: bindName})
+  },
+  // alt form of bind
+  "@b": function (name, value, el, name2, d) {
+        var bindName = value
+        // begin 2-way binding two-way two way. Multiselects are not supported, as of now
+        var handleChange = function () {
+            if (el._parentScope) { // if it's in a loop, then you are most likely binding to the foreachitemname
+                var usedScope = el // yes the actaul element
+            } else {
+                var usedScope = el._scope
+            }
+            if (el.type == "checkbox") {
+                var value = el.checked
+            } else if (window.attachEvent && el.type == "select-one") { // have to do this because of ie
+              var value = el.options[el.selectedIndex].value
+            } else if (el.type == "radio") { //chrome doesn't need this ie and safari do.
+                var value = el.value
+            } else {
+              var value = el.value
+            }
+            domrender.set(usedScope, bindName, value)
+            if (el._onreceiveExpr) {
+              domrender.eval(usedScope, el._onreceiveExpr, el._scope, el, value)
+            }
+            d.root.render() // render the lot
+            return true;
+        }
+        if (el.attachEvent) { // ie8
+          if (el.type == "checkbox" || el.type == "radio") {
+              el.attachEvent('onchange', handleChange) 
+              el.attachEvent('onclick', function () {
+                this.focus()
+                this.blur()
+              }) 
+          } else {
+              el.attachEvent('onchange', handleChange)
+          }
+          el.ieHandleChange = handleChange
+          el.ieOldValue = el.value 
+        } else {
+          if (el.type == "checkbox" || el.type == "radio" || el.type == "select-one") {
+              el.addEventListener('change', handleChange) 
+          } else {
+              el.addEventListener('input', handleChange)
+          }
+        }
+        return domrender.create(domrender.BoundInputAlt, {el: el, name: bindName})
   },
   "@component": function (name, value, el, name2, d) {
       var componentNode = document.getElementById(value)
